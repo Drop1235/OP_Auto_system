@@ -1,23 +1,73 @@
 // Match Card Component
 class MatchCard {
-  constructor(match) { // gameFormat引数を削除
+  constructor(match) {
     this.match = match;
-    if (!this.match.gameFormat) { // gameFormatプロパティがなければデフォルトで 'league' を設定
-      this.match.gameFormat = 'league';
+
+    // Initialize game format options (should match modal)
+    this.gameFormatOptions = {
+      '5game': '５ゲームマッチ',
+      '4game1set': '４ゲーム１セットマッチ',
+      '6game1set': '６ゲーム１セットマッチ',
+      '8game1set': '８ゲーム１セットマッチ',
+      '4game3set': '４ゲーム３セットマッチ',
+      '6game3set': '６ゲーム３セットマッチ',
+    };
+    
+    if (!this.match.gameFormat || !this.gameFormatOptions[this.match.gameFormat]) {
+      this.match.gameFormat = '5game'; // Default to '5game'
     }
-    // スコアがない場合は初期化 (null を許容)
-    if (this.match.scoreA === undefined) this.match.scoreA = null;
-    if (this.match.scoreB === undefined) this.match.scoreB = null;
+
+    // Initialize scores
+    // scoreA and scoreB will now be comma-separated strings for multi-set matches
+    // this.scoresA and this.scoresB will be arrays of numbers
+    // Tiebreaks are kept as single strings for now
+    this.scoresA = this._parseScores(this.match.scoreA, this._getNumberOfSets());
+    this.scoresB = this._parseScores(this.match.scoreB, this._getNumberOfSets());
+    
+    // Ensure score strings in this.match are consistent with parsed arrays
+    this.match.scoreA = this._stringifyScores(this.scoresA);
+    this.match.scoreB = this._stringifyScores(this.scoresB);
+
     if (!this.match.memo) this.match.memo = '';
     this.match.tieBreakA = this.match.tieBreakA || '';
     this.match.tieBreakB = this.match.tieBreakB || '';
     
     this.element = this.createCardElement();
     this.setupDragAndDrop();
-    this.updateScoreInputsInteractivity();
-    this.updateWinStatus();
+    // These methods below will require significant updates later:
+    this.updateScoreInputsInteractivity(); 
+    this.updateWinStatus(); 
     this.updateEndTimeDisplay();
     this.addDoubleClickToHistoryListener();
+  }
+
+  _getNumberOfSets() {
+    if (this.match.gameFormat === '4game3set' || this.match.gameFormat === '6game3set') {
+      return 3;
+    }
+    return 1;
+  }
+
+  _parseScores(scoreString, numSets) {
+    const defaultScores = Array(numSets).fill(null);
+    if (typeof scoreString !== 'string' || scoreString.trim() === '') {
+      return defaultScores;
+    }
+    const parts = scoreString.split(',');
+    const scores = parts.map(s => {
+      const num = parseInt(s, 10);
+      return isNaN(num) ? null : num;
+    });
+    // Ensure the array has the correct number of sets, padding with null if necessary
+    while (scores.length < numSets) {
+      scores.push(null);
+    }
+    return scores.slice(0, numSets); // Truncate if too long (e.g., format change)
+  }
+
+  _stringifyScores(scoresArray) {
+    if (!Array.isArray(scoresArray)) return '';
+    return scoresArray.map(s => (s === null || s === undefined || s === '') ? '' : String(s)).join(',');
   }
 
   // Create the match card DOM element

@@ -374,6 +374,28 @@ th:hover {
   margin-left: auto;
 }
 
+/* Add Match Modal - Radio Button Styling */
+.modal-content .form-group .radio-group {
+  display: flex;
+  flex-direction: column; /* 選択肢を縦に並べる */
+  gap: 8px; /* 各選択肢の間隔 */
+}
+
+.modal-content .form-group .radio-option {
+  display: flex;
+  align-items: center; /* ラジオボタンとラベルを垂直方向中央揃え */
+  gap: 8px; /* ラジオボタンとラベルの間隔 */
+}
+
+.modal-content .form-group .radio-option input[type="radio"] {
+  margin: 0; /* ブラウザのデフォルトマージンをリセット */
+}
+
+.modal-content .form-group .radio-option label {
+  margin: 0; /* ブラウザのデフォルトマージンをリセット */
+  font-weight: normal; /* 通常のフォントウェイト */
+}
+
 /* Unassigned Cards Section Styles */
 .unassigned-section {
   margin-top: 20px;
@@ -497,9 +519,48 @@ th:hover {
   margin-bottom: 10px; /* Space below the header */
 }
 
+/* Add Match Modal - Radio Button Styling */
+.modal-content .form-group .radio-group {
+  display: flex;
+  flex-direction: column; /* 選択肢を縦に並べる */
+  gap: 8px; /* 各選択肢の間隔 */
+}
+
+.modal-content .form-group .radio-option {
+  display: flex;
+  align-items: center; /* ラジオボタンとラベルを垂直方向中央揃え */
+  gap: 8px; /* ラジオボタンとラベルの間隔 */
+}
+
+.modal-content .form-group .radio-option input[type="radio"] {
+  margin: 0; /* ブラウザのデフォルトマージンをリセット */
+}
+
+.modal-content .form-group .radio-option label {
+  margin: 0; /* ブラウザのデフォルトマージンをリセット */
+  font-weight: normal; /* 通常のフォントウェイト */
+}
+
 .court-settings-title {
   font-size: 1.2em;
   font-weight: bold;
+}
+
+/* Overriding styles for Add Match Modal Radio Buttons - 2-column layout */
+.modal-content .form-group .radio-group {
+  display: flex;
+  flex-direction: row !important; /* Ensure override for horizontal layout */
+  flex-wrap: wrap !important; /* Ensure override for wrapping */
+  gap: 8px; /* Gap between radio options (rows and columns) */
+}
+
+.modal-content .form-group .radio-option {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start !important; /* Align radio button and label to the start (left) */
+  gap: 2px !important; /* Reduced gap between radio button and its label */
+  flex-basis: calc(50% - 4px) !important; /* For 2-column layout, considering parent's gap. Ensure override */
+  box-sizing: border-box !important; /* Ensure override */
 }
 
 .court-format-controls,

@@ -159,16 +159,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Load and set preferred game format
     const preferredGameFormat = localStorage.getItem('preferredGameFormat');
     if (preferredGameFormat) {
-      const radioToCheck = document.querySelector(`input[name="game-format"][value="${preferredGameFormat}"]`);
-      if (radioToCheck) {
-        radioToCheck.checked = true;
-      } else {
-        // Default if stored value is invalid (e.g., old value) or element not found
-        document.getElementById('game-format-league').checked = true;
+      const gameFormatSelect = document.getElementById('game-format-select');
+      if (gameFormatSelect) {
+        // Check if the preferredGameFormat is a valid option in the select
+        const optionExists = Array.from(gameFormatSelect.options).some(option => option.value === preferredGameFormat);
+        if (optionExists) {
+          gameFormatSelect.value = preferredGameFormat;
+        } else {
+          // Default if stored value is invalid or not an option
+          gameFormatSelect.value = '5game'; 
+        }
       }
     } else {
       // Default if no preference stored
-      document.getElementById('game-format-league').checked = true;
+      const gameFormatSelect = document.getElementById('game-format-select');
+      if (gameFormatSelect) {
+        gameFormatSelect.value = '5game';
+      }
     }
 
     addMatchModal.style.display = 'block';
@@ -215,7 +222,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const playerB = document.getElementById('player-b').value.trim();
     const courtNumber = document.getElementById('court-select').value;
     const position = document.getElementById('position-select').value;
-    const gameFormat = document.querySelector('input[name="game-format"]:checked').value;
+    const gameFormat = document.getElementById('game-format-select').value;
     
     // Save the selected game format for next time
     localStorage.setItem('preferredGameFormat', gameFormat);

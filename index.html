@@ -76,12 +76,13 @@
       <form id="add-match-form">
         <div class="form-group">
           <label>試合形式:</label>
-          <div class="radio-group">
-            <input type="radio" id="game-format-league" name="game-format" value="league" checked>
-            <label for="game-format-league">5ゲームマッチ</label>
-            <input type="radio" id="game-format-playoff" name="game-format" value="playoff">
-            <label for="game-format-playoff">6ゲームマッチ</label>
-          </div>
+          <select id="game-format-select" name="game-format" class="form-control">
+            <option value="5game">5G</option>
+            <option value="6game1set">6S</option>
+            <option value="8game1set">Pro 8</option>
+            <option value="4game3set">2S+MTB10</option>
+            <option value="6game3set">BO3</option>
+          </select>
         </div>
         <div class="form-group">
           <label for="player-a">選手A:</label>
