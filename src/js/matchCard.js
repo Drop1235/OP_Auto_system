@@ -51,12 +51,12 @@ class MatchCard {
 
     const optionLeague = document.createElement('option');
     optionLeague.value = 'league';
-    optionLeague.textContent = 'リーグ';
+    optionLeague.textContent = '5ゲームマッチ';
     gameFormatSelect.appendChild(optionLeague);
     
     const optionPlayoff = document.createElement('option');
     optionPlayoff.value = 'playoff'; // 代表決定戦の内部的な値
-    optionPlayoff.textContent = '代表決定戦';
+    optionPlayoff.textContent = '６ゲームマッチ';
     gameFormatSelect.appendChild(optionPlayoff);
     
     // 保存された値かデフォルト値を設定
