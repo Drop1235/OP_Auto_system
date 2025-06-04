@@ -13,9 +13,7 @@
       <button id="board-view-btn" class="active">対戦表</button>
       <button id="history-view-btn">試合履歴</button>
     </nav>
-    <div class="controls">
-      <button id="add-match-btn">試合追加</button>
-    </div>
+
   </header>
 
   <main>
@@ -24,7 +22,7 @@
       <!-- コート設定セクション -->
       <div id="court-settings" class="court-settings">
         <div class="court-settings-header">
-          <div class="court-settings-title">コート設定</div>
+          <button id="add-match-btn" class="add-match-btn-prominent">試合追加</button>
           <div class="court-count-controls">
             <button id="decrease-courts-btn">-</button>
             <span id="court-count-display" class="court-count-display">12</span>
@@ -58,36 +56,14 @@
           <input type="date" id="date-filter">
           <button id="clear-date-filter">クリア</button>
         </div>
-        <div class="view-toggle">
-          <button id="table-view-btn" class="view-toggle-btn">表形式</button>
-          <button id="card-view-btn" class="view-toggle-btn active">カード形式</button>
         </div>
       </div>
       
-      <!-- カードビューモード -->
+      <!-- カードビューモード (これが唯一の表示モードになる) -->
       <div id="history-card-view" class="history-card-view">
         <div id="history-court-grid" class="court-grid history-court-grid">
           <!-- 履歴コートグリッドが動的に生成されます -->
         </div>
-      </div>
-      
-      <!-- テーブルビューモード -->
-      <div id="history-table-view" class="history-table-view hidden">
-        <table id="history-table">
-          <thead>
-            <tr>
-              <th data-sort="court">コート</th>
-              <th data-sort="playerA">選手A</th>
-              <th data-sort="playerB">選手B</th>
-              <th data-sort="startTime">開始時刻</th>
-              <th data-sort="endTime">終了時刻</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody id="history-table-body">
-            <!-- History entries will be populated dynamically -->
-          </tbody>
-        </table>
       </div>
     </section>
   </main>
@@ -98,6 +74,15 @@
       <span class="close-modal">&times;</span>
       <h2>新規試合追加</h2>
       <form id="add-match-form">
+        <div class="form-group">
+          <label>試合形式:</label>
+          <div class="radio-group">
+            <input type="radio" id="game-format-league" name="game-format" value="league" checked>
+            <label for="game-format-league">5ゲームマッチ</label>
+            <input type="radio" id="game-format-playoff" name="game-format" value="playoff">
+            <label for="game-format-playoff">6ゲームマッチ</label>
+          </div>
+        </div>
         <div class="form-group">
           <label for="player-a">選手A:</label>
           <input type="text" id="player-a" required>

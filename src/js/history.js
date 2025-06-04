@@ -2,14 +2,8 @@
 class History {
   constructor() {
     // View containers and elements
-    this.historyTableView = document.getElementById('history-table-view');
-    this.historyCardViewContainer = document.getElementById('history-card-view');
-    this.historyCardGrid = document.getElementById('history-court-grid'); // Where cards are actually placed
-    this.historyTableBody = document.getElementById('history-table-body');
-
-    // View toggle buttons
-    this.tableViewBtn = document.getElementById('table-view-btn');
-    this.cardViewBtn = document.getElementById('card-view-btn');
+    this.historyCardViewContainer = document.getElementById('history-card-view'); // Main container for card view
+    this.historyCardGrid = document.getElementById('history-court-grid'); // Grid where cards are placed
 
     // Filter elements
     this.courtFilter = document.getElementById('court-filter');
@@ -19,8 +13,13 @@ class History {
     this.sortColumn = 'endTime'; // Default sort
     this.sortDirection = 'desc';
     this.filteredMatches = [];
-    this.currentViewMode = 'card'; // Default view mode, matches initial HTML state
+    // currentViewMode is no longer needed as we only have card view
     
+    // Ensure card view is visible by default if it was hidden
+    if (this.historyCardViewContainer && this.historyCardViewContainer.classList.contains('hidden')) {
+      this.historyCardViewContainer.classList.remove('hidden');
+    }
+
     // Create export button if it doesn't exist
     if (!document.getElementById('export-csv-btn')) {
       this.createExportButton();
@@ -42,40 +41,25 @@ class History {
     try {
       const completedMatches = await db.getCompletedMatches();
       this.filteredMatches = [...completedMatches];
-      this.renderHistoryTable();
+      this.renderHistory(); // Changed from renderHistoryTable
       this.populateCourtFilter(completedMatches);
     } catch (error) {
       console.error('Error loading completed matches:', error);
     }
   }
 
-  // Render the history table or card view with the filtered and sorted matches
-  renderHistoryTable() {
+  // Render the history card view with the filtered and sorted matches
+  renderHistory() { // Renamed from renderHistoryTable
     const sortedMatches = this.sortMatches(this.filteredMatches);
 
-    if (this.currentViewMode === 'table') {
-      this.historyTableBody.innerHTML = ''; // Clear only the table body
-      if (sortedMatches.length === 0) {
-        const emptyRow = document.createElement('tr');
-        const emptyCell = document.createElement('td');
-        emptyCell.colSpan = document.querySelectorAll('#history-table th').length || 6; // Dynamic colspan
-        emptyCell.textContent = '履歴データが見つかりません。試合を完了するとここに表示されます。(ウェブ版ではローカルの試合データは表示されません)';
-        emptyCell.style.textAlign = 'center';
-        emptyRow.appendChild(emptyCell);
-        this.historyTableBody.appendChild(emptyRow);
-      } else {
-        this.renderTableView(sortedMatches); // This should populate this.historyTableBody
-      }
-    } else if (this.currentViewMode === 'card') {
-      this.historyCardGrid.innerHTML = ''; // Clear the grid where cards are placed
-      if (sortedMatches.length === 0) {
-        const emptyMessage = document.createElement('p');
-        emptyMessage.textContent = '履歴データが見つかりません。試合を完了するとここに表示されます。(ウェブ版ではローカルの試合データは表示されません)';
-        emptyMessage.style.textAlign = 'center';
-        this.historyCardGrid.appendChild(emptyMessage);
-      } else {
-        this.renderCardView(sortedMatches); // This should populate this.historyCardGrid
-      }
+    this.historyCardGrid.innerHTML = ''; // Clear the grid where cards are placed
+    if (sortedMatches.length === 0) {
+      const emptyMessage = document.createElement('p');
+      emptyMessage.textContent = '履歴データが見つかりません。試合を完了するとここに表示されます。(ウェブ版ではローカルの試合データは表示されません)';
+      emptyMessage.style.textAlign = 'center';
+      this.historyCardGrid.appendChild(emptyMessage);
+    } else {
+      this.renderCardView(sortedMatches); // This should populate this.historyCardGrid
     }
   }
 
@@ -265,71 +249,42 @@ class History {
 
   // Win表示を判定
   shouldShowWin(match, player) {
-    if (!match.actualEndTime) return false;
-    
+    if (!match.actualEndTime) return false; // Must be a completed match
+
     const scoreA = parseInt(match.scoreA) || 0;
     const scoreB = parseInt(match.scoreB) || 0;
-    
-    if (player === 'A') {
-      return scoreA > scoreB;
-    } else {
-      return scoreB > scoreA;
-    }
-  }
+    const gameFormat = match.gameFormat || 'league'; // Default to league if not specified
+    const tieBreakA = parseInt(match.tieBreakA) || 0;
+    const tieBreakB = parseInt(match.tieBreakB) || 0;
 
-  // テーブルビューをレンダリング
-  renderTableView(matches) {
-    // Create a row for each match
-    matches.forEach(match => {
-      const row = document.createElement('tr');
-      row.dataset.matchId = match.id;
-      
-      // Court number
-      const courtCell = document.createElement('td');
-      courtCell.textContent = match.courtNumber || 'N/A';
-      
-      // Player A
-      const playerACell = document.createElement('td');
-      playerACell.textContent = match.playerA;
-      
-      // Player B
-      const playerBCell = document.createElement('td');
-      playerBCell.textContent = match.playerB;
-      
-      // Actual start time
-      const startTimeCell = document.createElement('td');
-      startTimeCell.textContent = match.actualStartTime 
-        ? new Date(match.actualStartTime).toLocaleString() 
-        : 'N/A';
-      
-      // Actual end time
-      const endTimeCell = document.createElement('td');
-      endTimeCell.textContent = match.actualEndTime 
-        ? new Date(match.actualEndTime).toLocaleString() 
-        : 'N/A';
-      
-      // Actions cell
-      const actionsCell = document.createElement('td');
-      actionsCell.className = 'actions-cell';
-      
-      // Delete button
-      const deleteBtn = document.createElement('button');
-      deleteBtn.className = 'delete-btn';
-      deleteBtn.innerHTML = '&#10006;'; // X symbol
-      deleteBtn.title = 'Delete match';
-      deleteBtn.addEventListener('click', () => this.deleteMatch(match.id));
-      
-      actionsCell.appendChild(deleteBtn);
-      
-      row.appendChild(courtCell);
-      row.appendChild(playerACell);
-      row.appendChild(playerBCell);
-      row.appendChild(startTimeCell);
-      row.appendChild(endTimeCell);
-      row.appendChild(actionsCell);
-      
-      this.historyTableBody.appendChild(row);
-    });
+    if (gameFormat === 'league') {
+      // "5ゲームマッチ" - Assuming if (scoreA + scoreB) >= 5 means match has progressed enough
+      if ((scoreA + scoreB) >= 5) {
+        if (player === 'A' && scoreA > scoreB) return true;
+        if (player === 'B' && scoreB > scoreA) return true;
+      }
+    } else if (gameFormat === 'playoff') { // "6ゲームマッチ"
+      if (player === 'A') {
+        if (scoreA === 6 && scoreB < 5) return true; // e.g., 6-4, 6-3, ...
+        if (scoreA === 7 && scoreB === 5) return true; // 7-5
+        // Case: Set score is 6-6, Player A wins tie-break (e.g., tieBreakA=7, tieBreakB=5)
+        // This implies final set score would be recorded as 7-6 for Player A.
+        // So, if match.scoreA is 7 and match.scoreB is 6, it means Player A won the set 7-6.
+        if (scoreA === 7 && scoreB === 6) {
+          // Check if tieBreakA indicates a win for player A in a 7-6 scenario
+          // This assumes tieBreakA and tieBreakB are the points in the tie-break game.
+          if (tieBreakA > tieBreakB) return true;
+        }
+      } else if (player === 'B') {
+        if (scoreB === 6 && scoreA < 5) return true;
+        if (scoreB === 7 && scoreA === 5) return true;
+        // Case: Set score is 6-6, Player B wins tie-break
+        if (scoreB === 7 && scoreA === 6) {
+          if (tieBreakB > tieBreakA) return true;
+        }
+      }
+    }
+    return false;
   }
 
   // Sort matches based on the current sort column and direction
@@ -490,34 +445,7 @@ class History {
         this.exportToCSV();
       });
     }
-
-    // View toggle button listeners
-    if (this.tableViewBtn) {
-      this.tableViewBtn.addEventListener('click', () => {
-        if (this.currentViewMode !== 'table') {
-          this.currentViewMode = 'table';
-          this.tableViewBtn.classList.add('active');
-          this.cardViewBtn.classList.remove('active');
-          this.historyTableView.classList.remove('hidden');
-          this.historyCardViewContainer.classList.add('hidden');
-          this.renderHistoryTable();
-        }
-      });
-    }
-
-    if (this.cardViewBtn) {
-      this.cardViewBtn.addEventListener('click', () => {
-        if (this.currentViewMode !== 'card') {
-          this.currentViewMode = 'card';
-          this.cardViewBtn.classList.add('active');
-          this.tableViewBtn.classList.remove('active');
-          this.historyCardViewContainer.classList.remove('hidden');
-          this.historyTableView.classList.add('hidden');
-          this.renderHistoryTable();
-        }
-      });
-    }
-  }
+  } // Closes setupEventListeners
 
   // Create export button
   createExportButton() {
@@ -589,13 +517,9 @@ class History {
       // Delete from database
       await db.deleteMatch(matchId);
       
-      // Remove from UI
-      const row = document.querySelector(`tr[data-match-id="${matchId}"]`);
-      if (row) {
-        row.remove();
-      }
+      // UI update will be handled by reloading matches
       
-      // Reload matches to update filters and table
+      // Reload matches to update filters and card view
       await this.loadCompletedMatches();
       
     } catch (error) {

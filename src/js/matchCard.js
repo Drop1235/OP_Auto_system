@@ -5,9 +5,9 @@ class MatchCard {
     if (!this.match.gameFormat) { // gameFormatプロパティがなければデフォルトで 'league' を設定
       this.match.gameFormat = 'league';
     }
-    // スコアがない場合は初期化
-    if (!this.match.scoreA) this.match.scoreA = 0;
-    if (!this.match.scoreB) this.match.scoreB = 0;
+    // スコアがない場合は初期化 (null を許容)
+    if (this.match.scoreA === undefined) this.match.scoreA = null;
+    if (this.match.scoreB === undefined) this.match.scoreB = null;
     if (!this.match.memo) this.match.memo = '';
     this.match.tieBreakA = this.match.tieBreakA || '';
     this.match.tieBreakB = this.match.tieBreakB || '';
@@ -139,7 +139,7 @@ class MatchCard {
     scoreAInput.max = '99';
     scoreAInput.className = 'score-input';
     scoreAInput.dataset.player = 'A'; // Add data-player attribute
-    scoreAInput.value = this.match.scoreA || 0;
+    scoreAInput.value = (this.match.scoreA === null || this.match.scoreA === undefined) ? '' : this.match.scoreA;
     scoreAInput.addEventListener('change', (e) => {
       this.match.scoreA = parseInt(e.target.value) || 0;
       if (this.match.gameFormat === 'playoff' && e.target.value !== '') {
@@ -189,7 +189,7 @@ class MatchCard {
     scoreBInput.max = '99';
     scoreBInput.className = 'score-input';
     scoreBInput.dataset.player = 'B'; // Add data-player attribute
-    scoreBInput.value = this.match.scoreB || 0;
+    scoreBInput.value = (this.match.scoreB === null || this.match.scoreB === undefined) ? '' : this.match.scoreB;
     scoreBInput.addEventListener('change', (e) => {
       this.match.scoreB = parseInt(e.target.value) || 0;
       if (this.match.gameFormat === 'playoff' && e.target.value !== '') {
@@ -486,12 +486,29 @@ addDoubleClickToHistoryListener() {
           }
           
           // 試合ステータスを更新
-          const updatedMatchData = {
+        // 現在の入力値からスコアと試合形式を取得
+        const scoreAInput = this.element.querySelector('.score-input[data-player="A"]');
+        const scoreBInput = this.element.querySelector('.score-input[data-player="B"]');
+        const gameFormatSelect = this.element.querySelector('.match-card-game-format');
+
+        // scoreA, scoreB は入力フィールドから、それ以外は this.match から取得
+        const currentScoreA = scoreAInput ? parseInt(scoreAInput.value) || 0 : this.match.scoreA || 0;
+        const currentScoreB = scoreBInput ? parseInt(scoreBInput.value) || 0 : this.match.scoreB || 0;
+        const currentGameFormat = gameFormatSelect ? gameFormatSelect.value : this.match.gameFormat;
+
+        const updatedMatchData = {
             id: this.match.id,
             status: 'Completed',
             actualEndTime: new Date().toISOString(),
-            // courtNumber と rowPosition は変更しないか、履歴用の特別な値に設定
-            // ここでは変更しないでおく。board.js側で履歴エリアへの移動時に処理される想定
+            playerA: this.match.playerA,
+            playerB: this.match.playerB,
+            scoreA: currentScoreA,
+            scoreB: currentScoreB,
+            gameFormat: currentGameFormat,
+            memo: this.match.memo,
+            tieBreakA: this.match.tieBreakA || '', // MatchCardインスタンスのプロパティから取得
+            tieBreakB: this.match.tieBreakB || '', // MatchCardインスタンスのプロパティから取得
+            // courtNumber と rowPosition は変更しない
           };
 
           await db.updateMatch(updatedMatchData);

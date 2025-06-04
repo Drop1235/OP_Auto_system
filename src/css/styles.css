@@ -525,6 +525,25 @@ th:hover {
   min-width: 30px; /* Ensure buttons have a decent size */
 }
 
+/* Prominent Add Match Button in Court Settings Header */
+.add-match-btn-prominent {
+  padding: 10px 20px;
+  font-size: 1.1em;
+  font-weight: bold;
+  background-color: #28a745; /* Green color for 'add' action */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin-right: auto; /* Pushes other elements in the flex container to the right */
+  line-height: 1.5; /* Improves vertical text alignment with padding */
+}
+
+.add-match-btn-prominent:hover {
+  background-color: #218838; /* Darker green on hover */
+}
+
 /* Override match-card width specifically for unassigned cards */
 #unassigned-cards .match-card {
   width: 280px; /* Or a width that matches court cards, adjust as needed */
@@ -639,6 +658,43 @@ th:hover {
   padding: 15px;
   min-height: 100px;
   background-color: #fffbf0;
+}
+
+/* History View - Card Grid Layout */
+#history-court-grid {
+  display: grid; /* Ensure grid layout for columns */
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* Responsive columns */
+  gap: 20px; /* Space between court columns */
+  padding: 10px;
+  background-color: #f4f7f6; /* Light background for the grid area */
+}
+
+.history-court-column {
+  display: flex;
+  flex-direction: column; /* Stack cards vertically within a column */
+  gap: 10px; /* Space between cards within a column */
+  background-color: #ffffff; /* White background for each column */
+  border: 1px solid #e0e0e0; /* Light border for each column */
+  border-radius: 4px;
+  padding: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* Optional: Style for a header within each history-court-column if you re-enable it in JS */
+.history-court-column h4 {
+  font-size: 1.1em;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 10px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #eee;
+  text-align: center;
+}
+
+.history-card .match-card-court-info {
+  font-weight: bold;
+  color: #555;
+  /* Add any specific styling for the 'Court X - Yth' text if needed */
 }
 
 /* Web Footer Styles */
