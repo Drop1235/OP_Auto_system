@@ -1,0 +1,154 @@
+// Database implementation using localStorage for offline storage
+class TennisMatchDatabase {
+  constructor() {
+    this.storageKey = 'tennisTournamentMatches';
+    this.matches = [];
+    this.nextId = 1;
+    this.db = {}; // Compatibility placeholder
+    this.initDatabase();
+  }
+
+  // Initialize the database
+  async initDatabase() {
+    try {
+      // Load existing matches from localStorage
+      const storedData = localStorage.getItem(this.storageKey);
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+        this.matches = parsedData.matches || [];
+        this.nextId = parsedData.nextId || 1;
+      }
+      
+      // Find the highest ID to ensure new IDs are unique
+      if (this.matches.length > 0) {
+        const maxId = Math.max(...this.matches.map(match => match.id));
+        this.nextId = maxId + 1;
+      }
+      
+      console.log('Database initialized successfully');
+      this.db = true; // Set db to true for compatibility checks
+      return true;
+    } catch (error) {
+      console.error('Error initializing database:', error);
+      return false;
+    }
+  }
+
+  // Save current state to localStorage
+  _saveToStorage() {
+    try {
+      const dataToStore = {
+        matches: this.matches,
+        nextId: this.nextId
+      };
+      localStorage.setItem(this.storageKey, JSON.stringify(dataToStore));
+      return true;
+    } catch (error) {
+      console.error('Error saving to localStorage:', error);
+      return false;
+    }
+  }
+
+  // Add a new match
+  async addMatch(match) {
+    try {
+      // Create a new match with default values
+      const newMatch = {
+        id: this.nextId++,
+        playerA: match.playerA,
+        playerB: match.playerB,
+        scheduledStartTime: match.scheduledStartTime,
+        actualStartTime: null,
+        actualEndTime: null,
+        status: match.status || 'Unassigned',
+        courtNumber: match.courtNumber || null,
+        rowPosition: match.rowPosition || null,
+        createdAt: new Date().toISOString()
+      };
+      
+      // Add to matches array
+      this.matches.push(newMatch);
+      
+      // Save to localStorage
+      this._saveToStorage();
+      
+      return newMatch;
+    } catch (error) {
+      console.error('Error adding match:', error);
+      throw new Error('Failed to add match');
+    }
+  }
+
+  // Update an existing match
+  async updateMatch(match) {
+    try {
+      // Find the match by ID
+      const index = this.matches.findIndex(m => m.id === match.id);
+      
+      if (index === -1) {
+        throw new Error('Match not found');
+      }
+      
+      // Update match properties
+      const existingMatch = this.matches[index];
+      const updatedMatch = { ...existingMatch, ...match };
+      
+      // Replace in array
+      this.matches[index] = updatedMatch;
+      
+      // Save to localStorage
+      this._saveToStorage();
+      
+      return updatedMatch;
+    } catch (error) {
+      console.error('Error updating match:', error);
+      throw new Error('Failed to update match');
+    }
+  }
+
+  // Get all matches
+  async getAllMatches() {
+    return [...this.matches];
+  }
+
+  // Get matches by status
+  async getMatchesByStatus(status) {
+    return this.matches.filter(match => match.status === status);
+  }
+
+  // Get matches by court number
+  async getMatchesByCourt(courtNumber) {
+    return this.matches.filter(match => match.courtNumber === courtNumber);
+  }
+
+  // Get completed matches
+  async getCompletedMatches() {
+    return this.matches.filter(match => match.status === 'Completed');
+  }
+
+  // Delete a match
+  async deleteMatch(id) {
+    try {
+      // Find the match by ID
+      const index = this.matches.findIndex(m => m.id === id);
+      
+      if (index === -1) {
+        throw new Error('Match not found');
+      }
+      
+      // Remove from array
+      this.matches.splice(index, 1);
+      
+      // Save to localStorage
+      this._saveToStorage();
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting match:', error);
+      throw new Error('Failed to delete match');
+    }
+  }
+}
+
+// Create and export database instance
+const db = new TennisMatchDatabase();

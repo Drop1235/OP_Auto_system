@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>テニストーナメント対戦表</title>
+  <link rel="stylesheet" href="src/css/styles.css">
+</head>
+<body>
+  <header>
+    <h1>テニストーナメント対戦表</h1>
+    <nav>
+      <button id="board-view-btn" class="active">対戦表</button>
+      <button id="history-view-btn">試合履歴</button>
+    </nav>
+    <div class="controls">
+      <button id="add-match-btn">試合追加</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Board View -->
+    <section id="board-view" class="active-view">
+      <!-- コート設定セクション -->
+      <div id="court-settings" class="court-settings">
+        <div class="court-settings-header">
+          <div class="court-settings-title">コート設定</div>
+          <div class="court-count-controls">
+            <button id="decrease-courts-btn">-</button>
+            <span id="court-count-display" class="court-count-display">12</span>
+            <button id="increase-courts-btn">+</button>
+          </div>
+        </div>
+      </div>
+      <div id="court-grid" class="court-grid"></div>
+      
+      <!-- 未割当のカード用の枠 -->
+      <div class="unassigned-section">
+        <div class="unassigned-header">未割当の試合</div>
+        <div id="unassigned-cards" class="unassigned-cards">
+          <!-- 未割当のカードがここに表示されます -->
+        </div>
+      </div>
+    </section>
+
+    <!-- History View -->
+    <section id="history-view" class="hidden-view">
+      <div class="filter-controls">
+        <div class="filter-group">
+          <label for="court-filter">コート:</label>
+          <select id="court-filter">
+            <option value="all">全コート</option>
+            <!-- Courts will be populated dynamically -->
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="date-filter">日付:</label>
+          <input type="date" id="date-filter">
+          <button id="clear-date-filter">クリア</button>
+        </div>
+        <div class="view-toggle">
+          <button id="table-view-btn" class="view-toggle-btn">表形式</button>
+          <button id="card-view-btn" class="view-toggle-btn active">カード形式</button>
+        </div>
+      </div>
+      
+      <!-- カードビューモード -->
+      <div id="history-card-view" class="history-card-view">
+        <div id="history-court-grid" class="court-grid history-court-grid">
+          <!-- 履歴コートグリッドが動的に生成されます -->
+        </div>
+      </div>
+      
+      <!-- テーブルビューモード -->
+      <div id="history-table-view" class="history-table-view hidden">
+        <table id="history-table">
+          <thead>
+            <tr>
+              <th data-sort="court">コート</th>
+              <th data-sort="playerA">選手A</th>
+              <th data-sort="playerB">選手B</th>
+              <th data-sort="startTime">開始時刻</th>
+              <th data-sort="endTime">終了時刻</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="history-table-body">
+            <!-- History entries will be populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Add Match Modal -->
+  <div id="add-match-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-modal">&times;</span>
+      <h2>新規試合追加</h2>
+      <form id="add-match-form">
+        <div class="form-group">
+          <label for="player-a">選手A:</label>
+          <input type="text" id="player-a" required>
+        </div>
+        <div class="form-group">
+          <label for="player-b">選手B:</label>
+          <input type="text" id="player-b" required>
+        </div>
+        <!-- 予定開始時刻欄を削除 -->
+        <div class="form-group">
+          <label for="court-select">コート (任意):</label>
+          <select id="court-select">
+            <option value="">未割当</option>
+            <!-- Courts will be populated dynamically -->
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="position-select">位置 (任意):</label>
+          <select id="position-select">
+            <option value="">未割当</option>
+            <option value="current">現在の試合</option>
+            <option value="next">次の試合</option>
+            <option value="next2">次々の試合</option>
+          </select>
+        </div>
+        <button type="submit">追加</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="src/js/favicon.js"></script>
+  <script src="src/js/database.js"></script>
+  <script src="src/js/matchCard.js"></script>
+  <script src="src/js/board.js"></script>
+  <script src="src/js/history.js"></script>
+  <script src="src/js/app.js"></script>
+  
+  <!-- For web-only version (will be removed in Electron build) -->
+  <footer class="web-footer">
+    <p>テニストーナメント対戦表 - ウェブ版</p>
+    <p><small>これはスタンドアロンウェブ版です。オフラインでの使用にはElectronアプリをダウンロードしてください。</small></p>
+  </footer>
+</body>
+</html>

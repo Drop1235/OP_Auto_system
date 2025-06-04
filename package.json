@@ -1,0 +1,33 @@
+{
+  "name": "tennis-tournament-board",
+  "version": "1.0.0",
+  "description": "Offline Tennis Tournament Match Board App",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "pack": "electron-builder --dir",
+    "dist": "node build.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.6.4"
+  },
+  "dependencies": {
+    "electron-squirrel-startup": "^1.0.1",
+    "electron-store": "^8.1.0"
+  },
+  "build": {
+    "appId": "com.tennis.tournamentboard",
+    "productName": "Tennis Tournament Board",
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
