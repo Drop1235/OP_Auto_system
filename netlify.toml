@@ -1,0 +1,8 @@
+[build]
+  publish = "." # ルートディレクトリを公開
+  command = "# ビルドコマンドは現時点では不要"
+
+[dev]
+  command = "node server.js" # ローカル開発時のコマンド
+  port = 3000
+  publish = "."

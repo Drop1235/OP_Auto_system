@@ -1,14 +1,25 @@
 // History Component for managing the history view
 class History {
   constructor() {
-    this.historyTable = document.getElementById('history-table-body');
+    // View containers and elements
+    this.historyTableView = document.getElementById('history-table-view');
+    this.historyCardViewContainer = document.getElementById('history-card-view');
+    this.historyCardGrid = document.getElementById('history-court-grid'); // Where cards are actually placed
+    this.historyTableBody = document.getElementById('history-table-body');
+
+    // View toggle buttons
+    this.tableViewBtn = document.getElementById('table-view-btn');
+    this.cardViewBtn = document.getElementById('card-view-btn');
+
+    // Filter elements
     this.courtFilter = document.getElementById('court-filter');
     this.dateFilter = document.getElementById('date-filter');
     this.clearDateFilterBtn = document.getElementById('clear-date-filter');
     
-    this.sortColumn = 'endTime';
+    this.sortColumn = 'endTime'; // Default sort
     this.sortDirection = 'desc';
     this.filteredMatches = [];
+    this.currentViewMode = 'card'; // Default view mode, matches initial HTML state
     
     // Create export button if it doesn't exist
     if (!document.getElementById('export-csv-btn')) {
@@ -38,52 +49,106 @@ class History {
     }
   }
 
-  // Render the history table with the filtered and sorted matches
+  // Render the history table or card view with the filtered and sorted matches
   renderHistoryTable() {
-    this.historyTable.innerHTML = '';
-    
-    // Sort the matches
     const sortedMatches = this.sortMatches(this.filteredMatches);
-    
-    if (sortedMatches.length === 0) {
-      const emptyRow = document.createElement('tr');
-      const emptyCell = document.createElement('td');
-      emptyCell.colSpan = 6; // Updated to 6 to account for the actions column
-      emptyCell.textContent = 'No completed matches found';
-      emptyCell.style.textAlign = 'center';
-      emptyRow.appendChild(emptyCell);
-      this.historyTable.appendChild(emptyRow);
-      return;
-    }
-    
-    // カード表示モードかどうかをチェック
-    const isCardView = document.getElementById('history-view').classList.contains('card-view-mode');
-    
-    if (isCardView) {
-      // カードビューモードの場合
-      this.renderCardView(sortedMatches);
-    } else {
-      // 通常のテーブルビューモードの場合
-      this.renderTableView(sortedMatches);
+
+    if (this.currentViewMode === 'table') {
+      this.historyTableBody.innerHTML = ''; // Clear only the table body
+      if (sortedMatches.length === 0) {
+        const emptyRow = document.createElement('tr');
+        const emptyCell = document.createElement('td');
+        emptyCell.colSpan = document.querySelectorAll('#history-table th').length || 6; // Dynamic colspan
+        emptyCell.textContent = '履歴データが見つかりません。試合を完了するとここに表示されます。(ウェブ版ではローカルの試合データは表示されません)';
+        emptyCell.style.textAlign = 'center';
+        emptyRow.appendChild(emptyCell);
+        this.historyTableBody.appendChild(emptyRow);
+      } else {
+        this.renderTableView(sortedMatches); // This should populate this.historyTableBody
+      }
+    } else if (this.currentViewMode === 'card') {
+      this.historyCardGrid.innerHTML = ''; // Clear the grid where cards are placed
+      if (sortedMatches.length === 0) {
+        const emptyMessage = document.createElement('p');
+        emptyMessage.textContent = '履歴データが見つかりません。試合を完了するとここに表示されます。(ウェブ版ではローカルの試合データは表示されません)';
+        emptyMessage.style.textAlign = 'center';
+        this.historyCardGrid.appendChild(emptyMessage);
+      } else {
+        this.renderCardView(sortedMatches); // This should populate this.historyCardGrid
+      }
     }
   }
-  
+
   // カードビューをレンダリング
   renderCardView(matches) {
-    // カードコンテナを作成
-    const cardContainer = document.createElement('div');
-    cardContainer.className = 'history-card-container';
-    this.historyTable.appendChild(cardContainer);
-    
-    matches.forEach(match => {
-      // 履歴用のマッチカードを作成
-      const matchCard = this.createHistoryMatchCard(match);
-      cardContainer.appendChild(matchCard);
+    // this.historyCardGrid is already cleared by renderHistoryTable
+
+    // 1. Group matches by courtNumber
+    const matchesByCourt = matches.reduce((acc, match) => {
+      const court = match.courtNumber || 'N/A'; // Handle matches with no court number
+      if (!acc[court]) {
+        acc[court] = [];
+      }
+      acc[court].push(match);
+      return acc;
+    }, {});
+
+    // Get sorted court numbers to maintain a consistent order of columns
+    const sortedCourtNumbers = Object.keys(matchesByCourt).sort((a, b) => {
+      if (a === 'N/A') return 1; // Push 'N/A' to the end
+      if (b === 'N/A') return -1;
+      // Attempt to sort numerically, fallback to string sort if not purely numeric
+      const numA = parseInt(a, 10);
+      const numB = parseInt(b, 10);
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numA - numB;
+      }
+      return String(a).localeCompare(String(b)); // Fallback for non-numeric or mixed court names
     });
+
+    // 2. For each court, sort matches by endTime and create cards
+    sortedCourtNumbers.forEach(courtNumber => {
+      const courtMatches = matchesByCourt[courtNumber];
+
+      // Sort matches within this court by actualEndTime (ascending)
+      courtMatches.sort((a, b) => {
+        const timeA = a.actualEndTime ? new Date(a.actualEndTime).getTime() : Infinity;
+        const timeB = b.actualEndTime ? new Date(b.actualEndTime).getTime() : Infinity;
+        return timeA - timeB; // Ascending order (earliest ended first)
+      });
+
+      // Create a column div for this court
+      const courtColumnDiv = document.createElement('div');
+      courtColumnDiv.className = 'history-court-column';
+      
+      // Optional: Add a header to the column
+      // const columnHeader = document.createElement('h4');
+      // columnHeader.textContent = `コート ${courtNumber}`;
+      // courtColumnDiv.appendChild(columnHeader);
+
+      courtMatches.forEach((match, index) => {
+        const sequenceNumber = index + 1; // 1-based sequence
+        const matchCard = this.createHistoryMatchCard(match, sequenceNumber);
+        courtColumnDiv.appendChild(matchCard);
+      });
+
+      this.historyCardGrid.appendChild(courtColumnDiv);
+    });
+
+    // If no matches at all (across all courts) and grid is still empty
+    // This specific check might be redundant if renderHistoryTable already handles empty sortedMatches for card view
+    if (matches.length > 0 && this.historyCardGrid.innerHTML === '' && sortedCourtNumbers.length === 0) {
+      // This case implies matches exist but couldn't be grouped or rendered, which is unlikely with 'N/A' handling
+      // Or if all matches were 'N/A' and something went wrong.
+      const emptyMessage = document.createElement('p');
+      emptyMessage.textContent = 'No completed matches found to display in card view.';
+      emptyMessage.style.textAlign = 'center';
+      this.historyCardGrid.appendChild(emptyMessage);
+    }
   }
-  
+
   // 履歴用のマッチカードを作成
-  createHistoryMatchCard(match) {
+  createHistoryMatchCard(match, sequenceNumber) {
     const card = document.createElement('div');
     card.className = 'match-card history-card';
     card.dataset.matchId = match.id;
@@ -98,11 +163,15 @@ class History {
     memoDisplay.textContent = match.memo || '';
     headerDiv.appendChild(memoDisplay);
     
-    // コート番号
-    const courtNumber = document.createElement('div');
-    courtNumber.className = 'match-card-court';
-    courtNumber.textContent = `コート ${match.courtNumber || 'N/A'}`;
-    headerDiv.appendChild(courtNumber);
+    // コート番号とシーケンス
+    const courtInfoDiv = document.createElement('div');
+    courtInfoDiv.className = 'match-card-court-info'; // New class for potentially different styling
+    let courtText = `コート ${match.courtNumber || 'N/A'}`;
+    if (sequenceNumber) {
+      courtText += ` - ${sequenceNumber}番目`;
+    }
+    courtInfoDiv.textContent = courtText;
+    headerDiv.appendChild(courtInfoDiv);
     
     card.appendChild(headerDiv);
     
@@ -193,7 +262,7 @@ class History {
     
     return card;
   }
-  
+
   // Win表示を判定
   shouldShowWin(match, player) {
     if (!match.actualEndTime) return false;
@@ -207,7 +276,7 @@ class History {
       return scoreB > scoreA;
     }
   }
-  
+
   // テーブルビューをレンダリング
   renderTableView(matches) {
     // Create a row for each match
@@ -259,7 +328,7 @@ class History {
       row.appendChild(endTimeCell);
       row.appendChild(actionsCell);
       
-      this.historyTable.appendChild(row);
+      this.historyTableBody.appendChild(row);
     });
   }
 
@@ -421,8 +490,35 @@ class History {
         this.exportToCSV();
       });
     }
+
+    // View toggle button listeners
+    if (this.tableViewBtn) {
+      this.tableViewBtn.addEventListener('click', () => {
+        if (this.currentViewMode !== 'table') {
+          this.currentViewMode = 'table';
+          this.tableViewBtn.classList.add('active');
+          this.cardViewBtn.classList.remove('active');
+          this.historyTableView.classList.remove('hidden');
+          this.historyCardViewContainer.classList.add('hidden');
+          this.renderHistoryTable();
+        }
+      });
+    }
+
+    if (this.cardViewBtn) {
+      this.cardViewBtn.addEventListener('click', () => {
+        if (this.currentViewMode !== 'card') {
+          this.currentViewMode = 'card';
+          this.cardViewBtn.classList.add('active');
+          this.tableViewBtn.classList.remove('active');
+          this.historyCardViewContainer.classList.remove('hidden');
+          this.historyTableView.classList.add('hidden');
+          this.renderHistoryTable();
+        }
+      });
+    }
   }
-  
+
   // Create export button
   createExportButton() {
     const filterControls = document.querySelector('.filter-controls');
