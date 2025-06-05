@@ -90,6 +90,7 @@ class TennisMatchDatabase {
         status: match.status || 'Unassigned',
         courtNumber: match.courtNumber || null,
         rowPosition: match.rowPosition || null,
+        tiebreakScore: null, // タイブレークスコア（負けた方のスコアのみ）
         createdAt: new Date().toISOString()
       };
       

@@ -515,26 +515,37 @@ th:hover {
 /* Unassigned Cards Section Styles */
 .unassigned-section {
   margin-top: 20px;
-  padding: 10px;
   border: 1px solid #ddd;
   border-radius: 4px;
   background-color: #f9f9f9;
+  padding: 10px;
 }
 
 .unassigned-header {
-  font-size: 18px;
   font-weight: bold;
   margin-bottom: 10px;
-  color: #333;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #eee;
 }
 
-#unassigned-cards {
+.unassigned-cards {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px; /* Spacing between cards */
-  padding: 10px 0; /* Padding for the container itself */
-  min-height: 100px; /* Ensure the container has some height even when empty */
-  align-items: flex-start; /* Align items to the start of the cross axis */
+  gap: 10px;
+  min-height: 100px;
+  padding: 10px;
+  transition: background-color 0.2s ease;
+}
+
+.unassigned-cards.drag-over {
+  background-color: #e0f7fa;
+  border: 2px dashed #4fc3f7;
+  border-radius: 4px;
+}
+
+.row-highlight {
+  background-color: #e0f7fa;
+  border: 2px dashed #4fc3f7;
 }
 
 /* Match Card Game Format Select */

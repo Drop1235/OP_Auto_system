@@ -30,6 +30,7 @@ class Board {
     // this.loadGameFormat() は定義されていないため削除
     this.setupCourtSettings(); // This will also set up game format control
     this.updateCourtSelectOptions(); // Populate court select options on init
+    this.setupUnassignedArea(); // 未割当エリアのドラッグ＆ドロップ機能を設定
   }
 
   // Create the court grid with the specified number of courts
@@ -412,40 +413,91 @@ class Board {
   
   // コート選択オプションを更新
   updateCourtSelectOptions() {
-    const courtSelect = document.getElementById('court-select');
-    if (!courtSelect) return;
+    const courtSelects = document.querySelectorAll('.court-select');
     
-    // 既存のオプションをクリア（最初の「未割当」オプションは残す）
-    while (courtSelect.options.length > 1) {
-      courtSelect.remove(1);
-    }
-    
-    // 新しいオプションを追加
-    for (let i = 1; i <= this.numberOfCourts; i++) {
-      const option = document.createElement('option');
-      option.value = i;
-      option.textContent = this.getCourtName(i);
-      courtSelect.appendChild(option);
-    }
-    
-    // 履歴ビューのフィルターも更新
-    const courtFilter = document.getElementById('court-filter');
-    if (courtFilter) {
-      // 既存のオプションをクリア（最初の「All Courts」オプションは残す）
-      while (courtFilter.options.length > 1) {
-        courtFilter.remove(1);
-      }
+    courtSelects.forEach(select => {
+      // 現在の選択値を保存
+      const currentValue = select.value;
       
-      // 新しいオプションを追加
+      // オプションをクリア
+      select.innerHTML = '';
+      
+      // 未割当オプションを追加
+      const unassignedOption = document.createElement('option');
+      unassignedOption.value = '';
+      unassignedOption.textContent = '未割当';
+      select.appendChild(unassignedOption);
+      
+      // コートオプションを追加
       for (let i = 1; i <= this.numberOfCourts; i++) {
         const option = document.createElement('option');
         option.value = i;
         option.textContent = this.getCourtName(i);
-        courtFilter.appendChild(option);
+        select.appendChild(option);
       }
-    }
+    });
   }
 
+  // 未割当エリアのドラッグ＆ドロップ機能を設定
+  setupUnassignedArea() {
+    const unassignedArea = document.getElementById('unassigned-cards');
+    if (!unassignedArea) return;
+    
+    // ドラッグオーバー時のイベント
+    unassignedArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      unassignedArea.classList.add('drag-over');
+    });
+    
+    // ドラッグリーブ時のイベント
+    unassignedArea.addEventListener('dragleave', (e) => {
+      unassignedArea.classList.remove('drag-over');
+    });
+    
+    // ドロップ時のイベント
+    unassignedArea.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      unassignedArea.classList.remove('drag-over');
+      
+      // ドラッグされたカードのIDを取得
+      const matchId = parseInt(e.dataTransfer.getData('text/plain'));
+      if (!matchId) return;
+      
+      // ソースのコートと行を取得
+      const sourceCourtNumber = parseInt(e.dataTransfer.getData('source-court')) || null;
+      const sourceRowType = e.dataTransfer.getData('source-row') || null;
+      
+      try {
+        // データベースから試合を取得
+        const matches = await db.getAllMatches();
+        const match = matches.find(m => m.id === matchId);
+        
+        if (!match) {
+          console.error('Match not found:', matchId);
+          return;
+        }
+        
+        // 試合のステータスを未割当に更新
+        const updatedMatch = await db.updateMatch({
+          id: matchId,
+          courtNumber: null,
+          rowPosition: null,
+          status: 'Unassigned'
+        });
+        
+        // ボードに更新を通知するイベントを発行
+        const updateEvent = new CustomEvent('match-updated', {
+          detail: { match: updatedMatch }
+        });
+        document.dispatchEvent(updateEvent);
+        
+      } catch (error) {
+        console.error('Error updating match:', error);
+      }
+    });
+  }
+  
   // Handle match updates
   handleMatchUpdate(match) {
     // Get the existing match card
