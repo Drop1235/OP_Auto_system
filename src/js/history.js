@@ -146,156 +146,327 @@ class History {
   // 履歴用のマッチカードを作成
   createHistoryMatchCard(match, sequenceNumber) {
     const card = document.createElement('div');
-    card.className = 'match-card history-card';
+    card.className = 'match-card';
     card.dataset.matchId = match.id;
     
-    // カードヘッダー
+    // カード上部（リーグ名とメモ）
     const headerDiv = document.createElement('div');
     headerDiv.className = 'match-card-header';
     
-    // メモ表示
-    const memoDisplay = document.createElement('div');
-    memoDisplay.className = 'match-card-memo-display';
-    memoDisplay.textContent = match.memo || '';
-    headerDiv.appendChild(memoDisplay);
+    // 削除ボタン (×) - ヘッダーの最初に追加
+    const deleteButton = document.createElement('span');
+    deleteButton.className = 'delete-button';
+    deleteButton.textContent = '×';
+    deleteButton.title = 'この試合を削除'; // ツールチップ
+    deleteButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.handleDeleteMatch(match.id);
+    });
+    headerDiv.appendChild(deleteButton);
     
-    // コート番号とシーケンス
-    const courtInfoDiv = document.createElement('div');
-    courtInfoDiv.className = 'match-card-court-info'; // New class for potentially different styling
-    let courtText = `コート ${match.courtNumber || 'N/A'}`;
-    if (sequenceNumber) {
-      courtText += ` - ${sequenceNumber}番目`;
+    // 試合形式表示
+    const gameFormatDisplay = document.createElement('div');
+    gameFormatDisplay.className = 'match-card-game-format-display';
+    
+    // 試合形式のラベルを取得
+    const gameFormatOptions = {
+      '5game': '5G',
+      '4game1set': '4G1set',
+      '6game1set': '6G1set',
+      '8game1set': '8G-Pro',
+      '4game2set': '4G2set+10MTB',
+      '6game2set': '6G2set+10MTB',
+      '4game3set': '4G3set',
+      '6game3set': '6G3set',
+    };
+    const currentFormat = match.gameFormat || '5game';
+    const formatLabel = gameFormatOptions[currentFormat] || currentFormat;
+    
+    // 試合形式の表示を設定
+    gameFormatDisplay.textContent = formatLabel;
+    headerDiv.appendChild(gameFormatDisplay);
+    
+    // 実際の終了時間表示
+    const endTimeDisplay = document.createElement('div');
+    endTimeDisplay.className = 'match-end-time-display';
+    if (match.actualEndTime) {
+      const endTime = new Date(match.actualEndTime);
+      const hours = endTime.getHours().toString().padStart(2, '0');
+      const minutes = endTime.getMinutes().toString().padStart(2, '0');
+      endTimeDisplay.textContent = `${hours}:${minutes}`;
     }
-    courtInfoDiv.textContent = courtText;
-    headerDiv.appendChild(courtInfoDiv);
+    headerDiv.appendChild(endTimeDisplay);
     
     card.appendChild(headerDiv);
     
-    // プレイヤー情報
-    const playersDiv = document.createElement('div');
-    playersDiv.className = 'match-card-players';
+    // メモ表示
+    if (match.memo) {
+      const memoDisplay = document.createElement('input');
+      memoDisplay.className = 'match-card-memo';
+      memoDisplay.value = match.memo;
+      memoDisplay.readOnly = true;
+      card.appendChild(memoDisplay);
+    }
+    
+    // プレイヤー情報（縦に配置）
+    const playersContainer = document.createElement('div');
+    playersContainer.className = 'match-card-players-container';
     
     // プレイヤーA
     const playerADiv = document.createElement('div');
     playerADiv.className = 'match-card-player';
     
-    const playerAName = document.createElement('div');
-    playerAName.className = 'player-name';
-    playerAName.textContent = match.playerA;
-    playerADiv.appendChild(playerAName);
+    // プレイヤーAラベルは不要
+    
+    // プレイヤーA名とスコアのコンテナ
+    const playerInfoA = document.createElement('div');
+    playerInfoA.style.display = 'flex';
+    playerInfoA.style.justifyContent = 'space-between';
+    playerInfoA.style.alignItems = 'center';
+    playerInfoA.style.width = '100%';
+    
+    // プレイヤーA名
+    const playerAName = document.createElement('input');
+    playerAName.className = 'player-name-input';
+    playerAName.value = match.playerA;
+    playerAName.readOnly = true;
+    playerAName.style.flexGrow = '1';
+    playerInfoA.appendChild(playerAName);
+    
+    // 右側のスコアとチェックマークのコンテナ
+    const scoreWinContainerA = document.createElement('div');
+    scoreWinContainerA.style.display = 'flex';
+    scoreWinContainerA.style.alignItems = 'center';
+    scoreWinContainerA.style.gap = '5px';
+    scoreWinContainerA.style.width = '150px'; // 幅をさらに広げてセットスコアとチェックマークが収まるように
+    
+    // スコア表示用コンテナ
+    const scoreContainerA = document.createElement('div');
+    scoreContainerA.className = 'set-scores-container';
+    scoreContainerA.style.display = 'flex';
+    scoreContainerA.style.justifyContent = 'flex-end';
     
     // スコア表示
-    if (match.scoreA !== undefined && match.scoreA !== null) {
-      const scoreA = document.createElement('div');
-      scoreA.className = 'player-score';
-      scoreA.textContent = match.scoreA;
-      playerADiv.appendChild(scoreA);
+    if (match.gameFormat === '6game3set' || match.gameFormat === '4game3set' || 
+        match.gameFormat === '4game2set' || match.gameFormat === '6game2set') {
+      // BO3形式の場合はセットスコアを表示
+      if (match.setScores && match.setScores.A) {
+        // セットスコア表示用のコンテナ
+        const setScoresDisplayA = document.createElement('div');
+        setScoresDisplayA.style.display = 'flex';
+        setScoresDisplayA.style.gap = '1px';
+        
+        // 各セットのスコアを表示
+        for (let i = 0; i < match.setScores.A.length; i++) {
+          if (match.setScores.A[i] > 0) { // スコアがある場合のみ表示
+            const setScore = document.createElement('input');
+            setScore.type = 'number';
+            setScore.className = 'set-score-input';
+            setScore.value = match.setScores.A[i];
+            setScore.readOnly = true;
+            setScore.style.width = '20px';
+            setScore.style.textAlign = 'center';
+            setScoresDisplayA.appendChild(setScore);
+          }
+        }
+        
+        scoreContainerA.appendChild(setScoresDisplayA);
+      } else {
+        // セットスコアがない場合は通常のスコアを表示
+        const scoreA = document.createElement('input');
+        scoreA.className = 'score-input';
+        scoreA.value = match.scoreA || '';
+        scoreA.readOnly = true;
+        scoreA.style.width = '40px';
+        scoreA.style.textAlign = 'center';
+        scoreContainerA.appendChild(scoreA);
+      }
+    } else {
+      // 通常のスコア表示
+      const scoreA = document.createElement('input');
+      scoreA.className = 'score-input';
+      scoreA.value = match.scoreA || '';
+      scoreA.readOnly = true;
+      scoreA.style.width = '40px';
+      scoreA.style.textAlign = 'center';
+      scoreContainerA.appendChild(scoreA);
     }
     
-    // Winラベル
-    const winALabel = document.createElement('div');
-    winALabel.className = 'win-label';
-    if (this.shouldShowWin(match, 'A')) {
-      winALabel.textContent = 'Win';
-      winALabel.style.color = 'red';
+    // タイブレークスコア表示
+    if (match.tieBreakA) {
+      const tiebreakA = document.createElement('input');
+      tiebreakA.className = 'tiebreak-input';
+      tiebreakA.value = match.tieBreakA;
+      tiebreakA.readOnly = true;
+      tiebreakA.style.width = '30px';
+      scoreContainerA.appendChild(tiebreakA);
     }
-    playerADiv.appendChild(winALabel);
+    
+    scoreWinContainerA.appendChild(scoreContainerA);
+    
+    // Winラベル
+    if (match.winner === 'A') {
+      const winALabel = document.createElement('div');
+      winALabel.className = 'win-label';
+      winALabel.textContent = '✓'; // チェックマーク
+      winALabel.style.color = 'green';
+      winALabel.style.fontWeight = 'bold';
+      winALabel.style.fontSize = '1.2em';
+      winALabel.style.marginLeft = '5px';
+      winALabel.style.marginRight = '5px';
+      scoreWinContainerA.appendChild(winALabel);
+    }
+    
+    playerInfoA.appendChild(scoreWinContainerA);
+    playerADiv.appendChild(playerInfoA);
+    
+    playersContainer.appendChild(playerADiv);
     
     // プレイヤーB
     const playerBDiv = document.createElement('div');
     playerBDiv.className = 'match-card-player';
     
-    const playerBName = document.createElement('div');
-    playerBName.className = 'player-name';
-    playerBName.textContent = match.playerB;
-    playerBDiv.appendChild(playerBName);
+    // プレイヤーBラベルは不要
+    
+    // プレイヤーB名とスコアのコンテナ
+    const playerInfoB = document.createElement('div');
+    playerInfoB.style.display = 'flex';
+    playerInfoB.style.justifyContent = 'space-between';
+    playerInfoB.style.alignItems = 'center';
+    playerInfoB.style.width = '100%';
+    
+    // プレイヤーB名
+    const playerBName = document.createElement('input');
+    playerBName.className = 'player-name-input';
+    playerBName.value = match.playerB;
+    playerBName.readOnly = true;
+    playerBName.style.flexGrow = '1';
+    playerInfoB.appendChild(playerBName);
+    
+    // 右側のスコアとチェックマークのコンテナ
+    const scoreWinContainerB = document.createElement('div');
+    scoreWinContainerB.style.display = 'flex';
+    scoreWinContainerB.style.alignItems = 'center';
+    scoreWinContainerB.style.gap = '5px';
+    scoreWinContainerB.style.width = '150px'; // 幅をさらに広げてセットスコアとチェックマークが収まるように
+    
+    // スコア表示用コンテナ
+    const scoreContainerB = document.createElement('div');
+    scoreContainerB.className = 'set-scores-container';
+    scoreContainerB.style.display = 'flex';
+    scoreContainerB.style.justifyContent = 'flex-end';
     
     // スコア表示
-    if (match.scoreB !== undefined && match.scoreB !== null) {
-      const scoreB = document.createElement('div');
-      scoreB.className = 'player-score';
-      scoreB.textContent = match.scoreB;
-      playerBDiv.appendChild(scoreB);
+    if (match.gameFormat === '6game3set' || match.gameFormat === '4game3set' || 
+        match.gameFormat === '4game2set' || match.gameFormat === '6game2set') {
+      // BO3形式の場合はセットスコアを表示
+      if (match.setScores && match.setScores.B) {
+        // セットスコア表示用のコンテナ
+        const setScoresDisplayB = document.createElement('div');
+        setScoresDisplayB.style.display = 'flex';
+        setScoresDisplayB.style.gap = '1px';
+        
+        // 各セットのスコアを表示
+        for (let i = 0; i < match.setScores.B.length; i++) {
+          if (match.setScores.B[i] > 0) { // スコアがある場合のみ表示
+            const setScore = document.createElement('input');
+            setScore.type = 'number';
+            setScore.className = 'set-score-input';
+            setScore.value = match.setScores.B[i];
+            setScore.readOnly = true;
+            setScore.style.width = '20px';
+            setScore.style.textAlign = 'center';
+            setScoresDisplayB.appendChild(setScore);
+          }
+        }
+        
+        scoreContainerB.appendChild(setScoresDisplayB);
+      } else {
+        // セットスコアがない場合は通常のスコアを表示
+        const scoreB = document.createElement('input');
+        scoreB.className = 'score-input';
+        scoreB.value = match.scoreB || '';
+        scoreB.readOnly = true;
+        scoreB.style.width = '40px';
+        scoreB.style.textAlign = 'center';
+        scoreContainerB.appendChild(scoreB);
+      }
+    } else {
+      // 通常のスコア表示
+      const scoreB = document.createElement('input');
+      scoreB.className = 'score-input';
+      scoreB.value = match.scoreB || '';
+      scoreB.readOnly = true;
+      scoreB.style.width = '40px';
+      scoreB.style.textAlign = 'center';
+      scoreContainerB.appendChild(scoreB);
     }
+    
+    // タイブレークスコア表示
+    if (match.tieBreakB) {
+      const tiebreakB = document.createElement('input');
+      tiebreakB.className = 'tiebreak-input';
+      tiebreakB.value = match.tieBreakB;
+      tiebreakB.readOnly = true;
+      tiebreakB.style.width = '30px';
+      scoreContainerB.appendChild(tiebreakB);
+    }
+    
+    scoreWinContainerB.appendChild(scoreContainerB);
     
     // Winラベル
-    const winBLabel = document.createElement('div');
-    winBLabel.className = 'win-label';
-    if (this.shouldShowWin(match, 'B')) {
-      winBLabel.textContent = 'Win';
-      winBLabel.style.color = 'red';
-    }
-    playerBDiv.appendChild(winBLabel);
-    
-    playersDiv.appendChild(playerADiv);
-    playersDiv.appendChild(playerBDiv);
-    card.appendChild(playersDiv);
-    
-    // 時間情報
-    const timeInfo = document.createElement('div');
-    timeInfo.className = 'match-card-time-info';
-    
-    // 実際の終了時間
-    if (match.actualEndTime) {
-      const endTime = document.createElement('div');
-      endTime.className = 'match-end-time';
-      endTime.textContent = `終了: ${new Date(match.actualEndTime).toLocaleTimeString()}`;
-      timeInfo.appendChild(endTime);
+    if (match.winner === 'B') {
+      const winBLabel = document.createElement('div');
+      winBLabel.className = 'win-label';
+      winBLabel.textContent = '✓'; // チェックマーク
+      winBLabel.style.color = 'green';
+      winBLabel.style.fontWeight = 'bold';
+      winBLabel.style.fontSize = '1.2em';
+      winBLabel.style.marginLeft = '5px';
+      winBLabel.style.marginRight = '5px';
+      scoreWinContainerB.appendChild(winBLabel);
     }
     
-    card.appendChild(timeInfo);
+    playerInfoB.appendChild(scoreWinContainerB);
+    playerBDiv.appendChild(playerInfoB);
     
-    // 削除ボタン
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'delete-btn card-delete-btn';
-    deleteBtn.innerHTML = '&#10006;';
-    deleteBtn.title = '削除';
-    deleteBtn.addEventListener('click', (e) => {
-      e.stopPropagation(); // カードクリックイベントの伝播を防止
-      this.deleteMatch(match.id);
-    });
-    card.appendChild(deleteBtn);
+    playersContainer.appendChild(playerBDiv);
+    card.appendChild(playersContainer);
+    
+    // 下部の終了時間表示は不要 (上部にあるため)
     
     return card;
   }
 
   // Win表示を判定
   shouldShowWin(match, player) {
-    if (!match.actualEndTime) return false; // Must be a completed match
+    // 完了していない試合は勝者表示しない
+    if (!match.actualEndTime) return false;
 
+    // スコアがない場合は勝者表示しない
+    if (match.scoreA === undefined || match.scoreB === undefined) return false;
+    
     const scoreA = parseInt(match.scoreA) || 0;
     const scoreB = parseInt(match.scoreB) || 0;
-    const gameFormat = match.gameFormat || 'league'; // Default to league if not specified
-    const tieBreakA = parseInt(match.tieBreakA) || 0;
-    const tieBreakB = parseInt(match.tieBreakB) || 0;
-
-    if (gameFormat === 'league') {
-      // "5ゲームマッチ" - Assuming if (scoreA + scoreB) >= 5 means match has progressed enough
-      if ((scoreA + scoreB) >= 5) {
-        if (player === 'A' && scoreA > scoreB) return true;
-        if (player === 'B' && scoreB > scoreA) return true;
-      }
-    } else if (gameFormat === 'playoff') { // "6ゲームマッチ"
-      if (player === 'A') {
-        if (scoreA === 6 && scoreB < 5) return true; // e.g., 6-4, 6-3, ...
-        if (scoreA === 7 && scoreB === 5) return true; // 7-5
-        // Case: Set score is 6-6, Player A wins tie-break (e.g., tieBreakA=7, tieBreakB=5)
-        // This implies final set score would be recorded as 7-6 for Player A.
-        // So, if match.scoreA is 7 and match.scoreB is 6, it means Player A won the set 7-6.
-        if (scoreA === 7 && scoreB === 6) {
-          // Check if tieBreakA indicates a win for player A in a 7-6 scenario
-          // This assumes tieBreakA and tieBreakB are the points in the tie-break game.
-          if (tieBreakA > tieBreakB) return true;
-        }
-      } else if (player === 'B') {
-        if (scoreB === 6 && scoreA < 5) return true;
-        if (scoreB === 7 && scoreA === 5) return true;
-        // Case: Set score is 6-6, Player B wins tie-break
-        if (scoreB === 7 && scoreA === 6) {
-          if (tieBreakB > tieBreakA) return true;
-        }
-      }
+    
+    // 単純にスコアで勝者を判定
+    if (player === 'A' && scoreA > scoreB) return true;
+    if (player === 'B' && scoreB > scoreA) return true;
+    
+    // タイブレークの場合
+    if (scoreA === scoreB) {
+      const tieBreakA = parseInt(match.tieBreakA) || 0;
+      const tieBreakB = parseInt(match.tieBreakB) || 0;
+      
+      if (player === 'A' && tieBreakA > tieBreakB) return true;
+      if (player === 'B' && tieBreakB > tieBreakA) return true;
     }
+    
+    // winnerプロパティが明示的に設定されていればそれを使用
+    if (match.winner) {
+      return match.winner === player;
+    }
+    
     return false;
   }
 
@@ -458,6 +629,28 @@ class History {
       });
     }
   } // Closes setupEventListeners
+  
+  // 試合を削除する
+  async handleDeleteMatch(matchId) {
+    try {
+      // 確認ダイアログを表示
+      const confirmed = confirm('この試合を履歴から削除しますか？');
+      
+      if (confirmed) {
+        // データベースから試合を削除
+        await db.deleteMatch(matchId);
+        
+        // 履歴表示を更新
+        await this.loadCompletedMatches();
+        
+        // 成功メッセージ
+        console.log('試合が削除されました。ID:', matchId);
+      }
+    } catch (error) {
+      console.error('試合の削除中にエラーが発生しました:', error);
+      alert('試合の削除中にエラーが発生しました: ' + error.message);
+    }
+  }
 
   // 書き出しボタンとオプションを作成
   createExportButton() {
