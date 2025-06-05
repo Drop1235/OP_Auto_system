@@ -128,13 +128,7 @@ class MatchCard {
     
     // 試合形式の表示を設定
     gameFormatDisplay.textContent = formatLabel;
-    gameFormatDisplay.title = '試合形式は変更できません。変更する場合は新規に試合を作成してください。ダブルクリックで履歴へ移動します。';
-    
-    // ダブルクリックで履歴画面に移動するイベントを追加
-    gameFormatDisplay.addEventListener('dblclick', (e) => {
-      e.stopPropagation(); // 他のイベントへの伝播を防止
-      window.location.href = 'history.html';
-    });
+    gameFormatDisplay.title = '試合形式は変更できません。変更する場合は新規に試合を作成してください。';
     
     console.log('[MATCH_CARD] Setting game format display:', formatLabel);
     
@@ -275,33 +269,7 @@ class MatchCard {
       winADiv.classList.add('win-button');
     }
     
-    // Winボタンのクリックイベントを追加
-    winADiv.addEventListener('click', (e) => {
-      e.stopPropagation(); // ダブルクリックイベントの伝播を防止
-      
-      // 現在の勝者をクリア
-      if (this.match.winner === 'A') {
-        this.match.winner = null;
-        // Win状態が解除されたときに終了時刻をクリア
-        this.match.actualEndTime = null;
-      } else {
-        // Aを勝者に設定
-        this.match.winner = 'A';
-        // Win状態になったときに現在時刻を自動設定
-        const now = new Date();
-        this.match.actualEndTime = now.toISOString();
-      }
-      
-      // DB更新
-      this.updateMatchData({ 
-        winner: this.match.winner,
-        actualEndTime: this.match.actualEndTime 
-      });
-      
-      // UI更新
-      this.updateWinStatus();
-      this.updateEndTimeDisplay();
-    });
+    // Win機能をオフにするためクリックイベントを追加しない
     winADiv.dataset.player = 'A';
     playerADiv.appendChild(winADiv);
     
@@ -411,33 +379,7 @@ class MatchCard {
       winBDiv.classList.add('win-button');
     }
     
-    // Winボタンのクリックイベントを追加
-    winBDiv.addEventListener('click', (e) => {
-      e.stopPropagation(); // ダブルクリックイベントの伝播を防止
-      
-      // 現在の勝者をクリア
-      if (this.match.winner === 'B') {
-        this.match.winner = null;
-        // Win状態が解除されたときに終了時刻をクリア
-        this.match.actualEndTime = null;
-      } else {
-        // Bを勝者に設定
-        this.match.winner = 'B';
-        // Win状態になったときに現在時刻を自動設定
-        const now = new Date();
-        this.match.actualEndTime = now.toISOString();
-      }
-      
-      // DB更新
-      this.updateMatchData({ 
-        winner: this.match.winner,
-        actualEndTime: this.match.actualEndTime 
-      });
-      
-      // UI更新
-      this.updateWinStatus();
-      this.updateEndTimeDisplay();
-    });
+    // Win機能をオフにするためクリックイベントを追加しない
     winBDiv.dataset.player = 'B';
     playerBDiv.appendChild(winBDiv);
     

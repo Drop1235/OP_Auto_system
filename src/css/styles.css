@@ -129,6 +129,40 @@ button.active {
   padding: 5px;
 }
 
+#history-court-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: flex-start;
+  margin-top: 20px;
+}
+
+/* コート列のスタイル */
+.history-court-column {
+  flex: 1 0 300px;
+  max-width: 350px;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+  border: 1px solid #eaeaea;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* コートヘッダーのスタイル */
+.court-column-header {
+  padding: 10px 15px;
+  font-weight: bold;
+  color: white;
+  text-align: center;
+  font-size: 16px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
 .next-row, .next2-row {
   background-color: white;
 }
@@ -176,6 +210,22 @@ button.active {
   font-size: 12px;
 }
 
+/* 試合形式の表示スタイル */
+.match-card-game-format-display {
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.9em;
+  font-weight: bold;
+  color: #333;
+  cursor: default;
+  margin-right: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+}
+
 .match-card-memo {
   width: 100%;
   border: none;
@@ -203,16 +253,21 @@ button.active {
   align-items: center;
   margin-bottom: 4px;
   position: relative;
+  justify-content: flex-end; /* 右寄せにする */
 }
 
 .player-name-input {
-  flex: 1;
+  flex: 0 1 120px; /* 幅を少し広げる */
+  min-width: 70px;
   border: none;
   background: transparent;
   font-size: 0.9em;
   padding: 2px 0;
   border-bottom: 1px dashed #ccc;
-  margin-right: 5px;
+  margin-right: 8px; /* 右マージンを少し広げる */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .match-end-time-input {
@@ -238,11 +293,72 @@ button.active {
   padding: 2px;
 }
 
+/* セットスコア入力欄のスタイル */
+.set-scores-container {
+  display: flex;
+  gap: 4px; /* 間隔を調整 */
+  margin-right: 8px; /* 右マージンを維持 */
+  flex-shrink: 0; /* 縮小しないように */
+  align-items: center; /* 縦方向に中央揃え */
+  height: 100%; /* 高さを親要素に合わせる */
+}
+
+.set-score-input {
+  width: 36px; /* 幅をさらに広げて2桁の数字が確実に表示されるように */
+  text-align: center;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 2px 0; /* 横パディングを最小化 */
+  font-size: 0.9em;
+  min-width: 36px; /* 最小幅も広げる */
+  box-sizing: border-box; /* ボックスサイズを調整して幅を正確に制御 */
+  margin: 0; /* マージンをなくして幅を確保 */
+}
+
+.total-score {
+  font-weight: bold;
+  width: 20px;
+  text-align: center;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  padding: 2px;
+  margin-right: 8px;
+}
+
 .win-label {
   margin-left: 8px;
   font-weight: bold;
   width: 30px;
   text-align: center;
+}
+
+.win-button {
+  cursor: pointer;
+  border: 1px solid #ddd;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8f8f8;
+  font-size: 10px;
+  margin-left: 4px;
+  color: #666;
+}
+
+.win-button:hover {
+  background-color: #e0e0e0;
+}
+
+.win-check {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  margin-left: 4px;
 }
 
 .match-card-time {

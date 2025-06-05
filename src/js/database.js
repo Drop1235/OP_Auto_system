@@ -57,6 +57,7 @@ class TennisMatchDatabase {
         id: this.nextId++,
         playerA: match.playerA,
         playerB: match.playerB,
+        gameFormat: match.gameFormat || '5game', // 試合形式を追加
         scheduledStartTime: match.scheduledStartTime,
         actualStartTime: null,
         actualEndTime: null,
@@ -65,6 +66,8 @@ class TennisMatchDatabase {
         rowPosition: match.rowPosition || null,
         createdAt: new Date().toISOString()
       };
+      
+      console.log('[DATABASE] Adding new match with game format:', newMatch.gameFormat);
       
       // Add to matches array
       this.matches.push(newMatch);
@@ -121,9 +124,26 @@ class TennisMatchDatabase {
     return this.matches.filter(match => match.courtNumber === courtNumber);
   }
 
-  // Get completed matches
+  // Get completed matches (for history view)
   async getCompletedMatches() {
-    return this.matches.filter(match => match.status === 'Completed');
+    return this.matches.filter(match => match.winner);
+  }
+  
+  // Clear all completed matches from history
+  async clearCompletedMatches() {
+    try {
+      // フィルタリングして完了した試合のみを削除
+      this.matches = this.matches.filter(match => !match.winner);
+      
+      // ローカルストレージを更新
+      this.saveToLocalStorage();
+      
+      console.log('Completed matches cleared successfully');
+      return true;
+    } catch (error) {
+      console.error('Error clearing completed matches:', error);
+      return false;
+    }
   }
 
   // Delete a match
@@ -152,3 +172,6 @@ class TennisMatchDatabase {
 
 // Create and export database instance
 const db = new TennisMatchDatabase();
+
+// グローバル変数としてdbを設定
+window.db = db;

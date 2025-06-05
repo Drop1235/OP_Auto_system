@@ -25,6 +25,11 @@ class History {
       this.createExportButton();
     }
     
+    // Create clear history button if it doesn't exist
+    if (!document.getElementById('clear-history-btn')) {
+      this.createClearHistoryButton();
+    }
+    
     this.init();
   }
 
@@ -105,10 +110,17 @@ class History {
       const courtColumnDiv = document.createElement('div');
       courtColumnDiv.className = 'history-court-column';
       
-      // Optional: Add a header to the column
-      // const columnHeader = document.createElement('h4');
-      // columnHeader.textContent = `コート ${courtNumber}`;
-      // courtColumnDiv.appendChild(columnHeader);
+      // コート毎の色付きヘッダーを追加
+      const columnHeader = document.createElement('div');
+      columnHeader.className = 'court-column-header';
+      columnHeader.textContent = `コート ${courtNumber}`;
+      
+      // コートヘッダーの色をコート4のピンク色で統一
+      const pinkColor = '#e91e63'; // コート4のピンク色
+      
+      // 全てのコートに同じ色を適用
+      columnHeader.style.backgroundColor = pinkColor;
+      courtColumnDiv.appendChild(columnHeader);
 
       courtMatches.forEach((match, index) => {
         const sequenceNumber = index + 1; // 1-based sequence
@@ -465,6 +477,49 @@ class History {
     filterControls.appendChild(exportContainer);
   }
   
+  // Create clear history button
+  createClearHistoryButton() {
+    const clearBtn = document.createElement('button');
+    clearBtn.id = 'clear-history-btn';
+    clearBtn.className = 'btn btn-danger';
+    clearBtn.textContent = '履歴クリア';
+    clearBtn.style.marginLeft = '10px';
+    
+    clearBtn.addEventListener('click', async () => {
+      // 確認ダイアログを表示
+      const confirmed = await window.api.showConfirmDialog('試合履歴をすべてクリアしますか？この操作は元に戻せません。');
+      
+      if (confirmed) {
+        try {
+          // データベースから履歴をクリア
+          const success = await db.clearCompletedMatches();
+          
+          if (success) {
+            // 履歴表示を更新
+            this.filteredMatches = [];
+            this.renderHistory();
+            
+            // コートフィルターをリセット
+            this.populateCourtFilter([]);
+            
+            // 成功メッセージ
+            alert('試合履歴がクリアされました。');
+          } else {
+            alert('履歴のクリアに失敗しました。');
+          }
+        } catch (error) {
+          console.error('Error clearing history:', error);
+          alert('エラーが発生しました: ' + error.message);
+        }
+      }
+    });
+    
+    const historyHeader = document.querySelector('.history-header');
+    if (historyHeader) {
+      historyHeader.appendChild(clearBtn);
+    }
+  }
+
   // Export filtered matches to CSV
   exportToCSV() {
     // Get sorted matches

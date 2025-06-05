@@ -232,6 +232,7 @@ class Board {
   // Create a match card and place it on the board
   createAndPlaceMatchCard(match) {
     console.log('[BOARD] createAndPlaceMatchCard called with match:', match);
+    console.log('[BOARD] Match game format:', match.gameFormat);
     
     if (!match) {
       console.error('[BOARD] Error: match is undefined or null');
@@ -247,6 +248,7 @@ class Board {
     console.log('[BOARD] Creating new MatchCard instance');
     const matchCard = new MatchCard(match);
     console.log('[BOARD] MatchCard created:', matchCard);
+    console.log('[BOARD] MatchCard match game format:', matchCard.match.gameFormat);
     console.log('[BOARD] MatchCard element:', matchCard.element);
     this.matchCards.set(match.id, matchCard);
     
