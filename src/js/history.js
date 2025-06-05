@@ -459,19 +459,59 @@ class History {
     }
   } // Closes setupEventListeners
 
-  // Create export button
+  // 書き出しボタンとオプションを作成
   createExportButton() {
     const filterControls = document.querySelector('.filter-controls');
     if (!filterControls) return;
     
-    const exportBtn = document.createElement('button');
-    exportBtn.id = 'export-csv-btn';
-    exportBtn.className = 'export-btn';
-    exportBtn.textContent = 'Export to CSV';
+    // 書き出し方法を選択するセレクトボックス
+    const exportTypeSelect = document.createElement('select');
+    exportTypeSelect.id = 'export-type-select';
+    exportTypeSelect.className = 'export-type-select';
     
-    // Create a container for the export button
+    // CSV出力オプション
+    const csvOption = document.createElement('option');
+    csvOption.value = 'csv';
+    csvOption.textContent = 'CSV形式';
+    exportTypeSelect.appendChild(csvOption);
+    
+    // スクリーンショットオプション
+    const screenshotOption = document.createElement('option');
+    screenshotOption.value = 'screenshot';
+    screenshotOption.textContent = 'スクリーンショット';
+    exportTypeSelect.appendChild(screenshotOption);
+    
+    // 書き出しボタン
+    const exportBtn = document.createElement('button');
+    exportBtn.id = 'export-btn';
+    exportBtn.className = 'export-btn';
+    exportBtn.textContent = '書き出し';
+    
+    // ボタンクリック時の処理
+    exportBtn.addEventListener('click', () => {
+      const exportType = exportTypeSelect.value;
+      
+      if (exportType === 'csv') {
+        this.exportToCSV();
+      } else if (exportType === 'screenshot') {
+        this.exportScreenshot();
+      }
+    });
+    
+    // コンテナの作成
     const exportContainer = document.createElement('div');
     exportContainer.className = 'filter-group export-group';
+    exportContainer.style.display = 'flex';
+    exportContainer.style.alignItems = 'center';
+    exportContainer.style.gap = '10px';
+    
+    // ラベル追加
+    const exportLabel = document.createElement('span');
+    exportLabel.textContent = '出力形式:';
+    exportLabel.style.marginRight = '5px';
+    
+    exportContainer.appendChild(exportLabel);
+    exportContainer.appendChild(exportTypeSelect);
     exportContainer.appendChild(exportBtn);
     
     filterControls.appendChild(exportContainer);
@@ -520,43 +560,122 @@ class History {
     }
   }
 
-  // Export filtered matches to CSV
-  exportToCSV() {
-    // Get sorted matches
-    const sortedMatches = this.sortMatches(this.filteredMatches);
-    
-    if (sortedMatches.length === 0) {
-      alert('No matches to export');
-      return;
-    }
-    
-    // Create CSV header
-    let csvContent = 'Court,Player A,Player B,Scheduled Start,Actual Start,Actual End\n';
-    
-    // Add each match as a row
-    sortedMatches.forEach(match => {
-      const courtNumber = match.courtNumber || 'N/A';
-      const playerA = `"${match.playerA.replace(/"/g, '""')}"`; // Escape quotes
-      const playerB = `"${match.playerB.replace(/"/g, '""')}"`;
-      const scheduledStart = match.scheduledStartTime ? new Date(match.scheduledStartTime).toLocaleString() : 'N/A';
-      const actualStart = match.actualStartTime ? new Date(match.actualStartTime).toLocaleString() : 'N/A';
-      const actualEnd = match.actualEndTime ? new Date(match.actualEndTime).toLocaleString() : 'N/A';
+  // CSV形式でマッチをエクスポート
+  async exportToCSV() {
+    try {
+      // ソートしたマッチを取得
+      const sortedMatches = this.sortMatches(this.filteredMatches);
       
-      csvContent += `${courtNumber},${playerA},${playerB},${scheduledStart},${actualStart},${actualEnd}\n`;
-    });
-    
-    // Create a download link
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `tennis_matches_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.display = 'none';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      if (sortedMatches.length === 0) {
+        alert('書き出し可能な試合データがありません');
+        return;
+      }
+      
+      // CSVヘッダー作成
+      let csvContent = 'コート,プレイヤーA,プレイヤーB,予定開始時刻,実際開始時刻,実際終了時刻\n';
+      
+      // 各マッチを行として追加
+      sortedMatches.forEach(match => {
+        const courtNumber = match.courtNumber || 'N/A';
+        const playerA = `"${match.playerA.replace(/"/g, '""')}"`; // 引用符のエスケープ
+        const playerB = `"${match.playerB.replace(/"/g, '""')}"`;
+        const scheduledStart = match.scheduledStartTime ? new Date(match.scheduledStartTime).toLocaleString() : 'N/A';
+        const actualStart = match.actualStartTime ? new Date(match.actualStartTime).toLocaleString() : 'N/A';
+        const actualEnd = match.actualEndTime ? new Date(match.actualEndTime).toLocaleString() : 'N/A';
+        
+        csvContent += `${courtNumber},${playerA},${playerB},${scheduledStart},${actualStart},${actualEnd}\n`;
+      });
+      
+      // Electron APIを使って保存先を選択する
+      const defaultFilename = `テニス試合記録_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '-')}.csv`;
+      
+      // window.apiが存在する場合はネイティブ方式で保存
+      if (window.api && window.api.saveCSVFile) {
+        try {
+          const result = await window.api.saveCSVFile(csvContent, defaultFilename);
+          if (result.success) {
+            console.log('ファイルが保存されました:', result.path);
+          } else if (result.canceled) {
+            console.log('CSV保存がキャンセルされました');
+          } else {
+            console.error('CSV保存エラー:', result.error);
+            alert('ファイルの保存に失敗しました: ' + result.error);
+          }
+        } catch (error) {
+          console.error('CSV保存APIエラー:', error);
+          this._fallbackCSVSave(csvContent, defaultFilename); // フォールバック処理
+        }
+      } else {
+        // APIが利用できない場合は従来のブラウザ方式で保存
+        console.warn('ネイティブのCSV保存APIが利用できないため、ブラウザの保存機能を使用します');
+        this._fallbackCSVSave(csvContent, defaultFilename);
+      }
+    } catch (error) {
+      console.error('CSVエクスポートエラー:', error);
+      alert('データの書き出し中にエラーが発生しました');
+    }
+  }
+  
+  // ブラウザベースの保存処理（フォールバック用）
+  _fallbackCSVSave(csvContent, filename) {
+    try {
+      // BOM付きUTF-8で保存
+      const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+      const csvData = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8' });
+      
+      const url = URL.createObjectURL(csvData);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.display = 'none';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('フォールバック保存エラー:', error);
+      alert('ファイルの保存に失敗しました');
+    }
+  }
+
+  // スクリーンショットをエクスポート
+  exportScreenshot() {
+    // Electron APIを使ってスクリーンショットを撮影
+    if (window.api && window.api.takeScreenshot) {
+      try {
+        // 要素を非表示にしてからスクリーンショットを撮影
+        const exportContainer = document.querySelector('.export-group');
+        const tempStyle = exportContainer ? exportContainer.style.display : null;
+        if (exportContainer) {
+          exportContainer.style.display = 'none';
+        }
+        
+        // スクリーンショットの前に少し待つ
+        setTimeout(async () => {
+          try {
+            // Electronのプリロードスクリプト経由でスクリーンショット撮影
+            await window.api.takeScreenshot(`テニス試合記録_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '-')}.png`);
+            alert('スクリーンショットを保存しました');
+          } catch (error) {
+            console.error('スクリーンショット撮影エラー:', error);
+            alert('スクリーンショットの撮影に失敗しました');
+          } finally {
+            // 非表示にした要素を元に戻す
+            if (exportContainer && tempStyle !== null) {
+              exportContainer.style.display = tempStyle;
+            }
+          }
+        }, 100);
+      } catch (error) {
+        console.error('スクリーンショット処理エラー:', error);
+        alert('スクリーンショット機能でエラーが発生しました');
+      }
+    } else {
+      // Electron APIが利用できない場合はエラーメッセージ
+      alert('この機能はデスクトップアプリでのみ利用可能です');
+      console.warn('スクリーンショットAPIが見つかりません');
+    }
   }
   
   // Delete a match from the database
@@ -564,7 +683,7 @@ class History {
     if (!matchId) return;
     
     // Confirm deletion
-    if (!confirm('Are you sure you want to delete this match?')) {
+    if (!confirm('この試合を削除してもよろしいですか？')) {
       return;
     }
     
@@ -579,7 +698,7 @@ class History {
       
     } catch (error) {
       console.error('Error deleting match:', error);
-      alert('Failed to delete match. Please try again.');
+      alert('試合の削除に失敗しました。もう一度お試しください。');
     }
   }
 }

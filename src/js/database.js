@@ -11,18 +11,40 @@ class TennisMatchDatabase {
   // Initialize the database
   async initDatabase() {
     try {
+      // データベースがすでに初期化されているか確認
+      if (this.db === true) {
+        console.log('Database already initialized');
+        return true;
+      }
+      
+      console.log('Initializing database...');
+      
       // Load existing matches from localStorage
       const storedData = localStorage.getItem(this.storageKey);
       if (storedData) {
-        const parsedData = JSON.parse(storedData);
-        this.matches = parsedData.matches || [];
-        this.nextId = parsedData.nextId || 1;
+        try {
+          const parsedData = JSON.parse(storedData);
+          this.matches = parsedData.matches || [];
+          this.nextId = parsedData.nextId || 1;
+          console.log(`Loaded ${this.matches.length} matches from localStorage`);
+        } catch (parseError) {
+          console.error('Error parsing stored data:', parseError);
+          // 保存データが壊れている場合は初期化
+          this.matches = [];
+          this.nextId = 1;
+          localStorage.removeItem(this.storageKey);
+        }
+      } else {
+        console.log('No stored data found, starting with empty database');
+        this.matches = [];
+        this.nextId = 1;
       }
       
       // Find the highest ID to ensure new IDs are unique
       if (this.matches.length > 0) {
         const maxId = Math.max(...this.matches.map(match => match.id));
         this.nextId = maxId + 1;
+        console.log(`Set next ID to ${this.nextId}`);
       }
       
       console.log('Database initialized successfully');
@@ -30,7 +52,11 @@ class TennisMatchDatabase {
       return true;
     } catch (error) {
       console.error('Error initializing database:', error);
-      return false;
+      // エラーが発生してもアプリが起動できるようにする
+      this.matches = [];
+      this.nextId = 1;
+      this.db = true; // Still set to true to allow app to function
+      return true;
     }
   }
 

@@ -133,7 +133,14 @@ class MatchCard {
     // ダブルクリックで履歴画面に移動するイベントを追加
     gameFormatDisplay.addEventListener('dblclick', (e) => {
       e.stopPropagation(); // 他のイベントへの伝播を防止
-      window.location.href = 'history.html';
+      
+      // ナビゲーションボタンをプログラムからクリックして履歴画面に切り替え
+      const historyViewBtn = document.getElementById('history-view-btn');
+      if (historyViewBtn) {
+        historyViewBtn.click();
+      } else {
+        console.error('[エラー] 履歴ボタンが見つかりません');
+      }
     });
     
     console.log('[MATCH_CARD] Setting game format display:', formatLabel);
