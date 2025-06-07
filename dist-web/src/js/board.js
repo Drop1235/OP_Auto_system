@@ -413,18 +413,21 @@ class Board {
   
   // コート選択オプションを更新
   updateCourtSelectOptions() {
-    // 1. 既存の .court-select すべてを更新
     const courtSelects = document.querySelectorAll('.court-select');
+    
     courtSelects.forEach(select => {
       // 現在の選択値を保存
       const currentValue = select.value;
+      
       // オプションをクリア
       select.innerHTML = '';
+      
       // 未割当オプションを追加
       const unassignedOption = document.createElement('option');
       unassignedOption.value = '';
       unassignedOption.textContent = '未割当';
       select.appendChild(unassignedOption);
+      
       // コートオプションを追加
       for (let i = 1; i <= this.numberOfCourts; i++) {
         const option = document.createElement('option');
@@ -433,26 +436,6 @@ class Board {
         select.appendChild(option);
       }
     });
-    // 2. 新規試合追加モーダルのcourt-select(id="court-select")も必ず更新
-    const modalCourtSelect = document.getElementById('court-select');
-    if (modalCourtSelect) {
-      const prevValue = modalCourtSelect.value;
-      modalCourtSelect.innerHTML = '';
-      const unassignedOption = document.createElement('option');
-      unassignedOption.value = '';
-      unassignedOption.textContent = '未割当';
-      modalCourtSelect.appendChild(unassignedOption);
-      for (let i = 1; i <= this.numberOfCourts; i++) {
-        const option = document.createElement('option');
-        option.value = i;
-        option.textContent = this.getCourtName(i);
-        modalCourtSelect.appendChild(option);
-      }
-      // 可能なら前の選択値を復元
-      if ([...modalCourtSelect.options].some(opt => opt.value === prevValue)) {
-        modalCourtSelect.value = prevValue;
-      }
-    }
   }
 
   // 未割当エリアのドラッグ＆ドロップ機能を設定

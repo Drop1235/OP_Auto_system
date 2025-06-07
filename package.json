@@ -1,7 +1,7 @@
 {
   "name": "tennis-tournament-board",
-  "version": "1.0.0",
-  "description": "Offline Tennis Tournament Match Board App",
+  "version": "1.1.0",
+  "description": "Tennis Tournament Match Board Application with Password Protection",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

@@ -3,6 +3,7 @@ const path = require('path');
 
 // Define build configuration
 build({
+  publish: null,
   config: {
     appId: 'com.tennis.tournamentboard',
     productName: 'Tennis Tournament Board',
@@ -10,7 +11,8 @@ build({
       output: path.resolve(__dirname, 'dist')
     },
     win: {
-      target: ['portable', 'nsis'],
+      target: ['portable'],
+      // アイコンフォーマットに問題があるため無効化
       // icon: path.resolve(__dirname, 'assets/icon.ico')
     },
     nsis: {

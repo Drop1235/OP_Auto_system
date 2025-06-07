@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>テニストーナメント対戦表</title>
+  <link rel="stylesheet" href="src/css/styles.css">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+</head>
+<body>
+  <header>
+    <h1>テニストーナメント対戦表</h1>
+    <nav>
+      <button id="board-view-btn" class="active">対戦表</button>
+      <button id="history-view-btn">試合履歴</button>
+      <button id="logout-btn" style="margin-left: auto; background-color: #f44336;">ログアウト</button>
+    </nav>
+  </header>
+  <main>
+    <!-- Board View -->
+    <section id="board-view" class="active-view">
+      <div id="court-settings" class="court-settings">
+        <div class="court-settings-header">
+          <button id="add-match-btn" class="add-match-btn-prominent">試合追加</button>
+          <div class="court-count-controls">
+            <button id="decrease-courts-btn">-</button>
+            <span id="court-count-display" class="court-count-display">12</span>
+            <button id="increase-courts-btn">+</button>
+          </div>
+        </div>
+      </div>
+      <div id="court-grid" class="court-grid"></div>
+      <div class="unassigned-section">
+        <div class="unassigned-header">未割当の試合</div>
+        <div id="unassigned-cards" class="unassigned-cards"></div>
+      </div>
+    </section>
+    <!-- History View -->
+    <section id="history-view" class="hidden-view">
+      <div class="filter-controls">
+        <div class="filter-group">
+          <label for="court-filter">コート:</label>
+          <select id="court-filter">
+            <option value="all">全コート</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="date-filter">日付:</label>
+          <input type="date" id="date-filter">
+        </div>
+        <button id="clear-filter-btn">クリア</button>
+      </div>
+      <div id="history-list" class="history-list"></div>
+    </section>
+  </main>
+  <footer>
+    <p>テニストーナメント対戦表 - ウェブ版</p>
+    <p><small>これはスタンドアロンウェブ版です。オフラインでの使用にはElectronアプリをダウンロードしてください。</small></p>
+  </footer>
+  <script src="src/js/auth.js"></script>
+  <script src="src/js/board.js"></script>
+  <script src="src/js/history.js"></script>
+</body>
+</html>

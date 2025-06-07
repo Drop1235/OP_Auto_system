@@ -151,6 +151,14 @@ class MatchCard {
             detail: { match: updatedMatch }
           });
           document.dispatchEvent(updateEvent);
+          
+          // 履歴画面に切り替え
+          const historyViewBtn = document.getElementById('history-view-btn');
+          if (historyViewBtn) {
+            historyViewBtn.click();
+          } else {
+            console.error('[エラー] 履歴ボタンが見つかりません');
+          }
         }
       } catch (error) {
         console.error('試合の完了処理中にエラーが発生しました:', error);

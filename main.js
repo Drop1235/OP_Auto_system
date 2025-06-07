@@ -25,11 +25,11 @@ function createWindow() {
     }
   });
 
-  // Load the index.html file
-  mainWindow.loadFile('index.html');
+  // Load the login.html file first
+  mainWindow.loadFile('login.html');
   
-  // 開発ツールを自動的に開く
-  mainWindow.webContents.openDevTools();
+  // 本番リリースでは開発ツールを無効化
+  // mainWindow.webContents.openDevTools();
 
   // Clear the reference when the window is closed
   mainWindow.on('closed', () => {
