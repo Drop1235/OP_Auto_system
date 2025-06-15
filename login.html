@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>テニストーナメント対戦表 - ログイン</title>
+  <title>MatchDrop - ログイン</title>
+  <link rel="icon" href="assets/icon.png">
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -38,7 +39,7 @@
       box-sizing: border-box;
     }
     button {
-      background-color: #e91e63;
+      background-color: #28a745;
       color: white;
       border: none;
       padding: 12px 20px;
@@ -48,7 +49,7 @@
       width: 100%;
     }
     button:hover {
-      background-color: #d81b60;
+      background-color: #218838;
     }
     .error-message {
       color: red;
@@ -60,7 +61,10 @@
 </head>
 <body>
   <div class="login-container">
-    <h1>テニストーナメント対戦表</h1>
+    <div class="app-brand" style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+      <img src="assets/icon.png" alt="MatchDrop icon" style="width:64px;height:64px;">
+      <span style="font-size:24px;font-weight:600;color:#28a745;">MatchDrop</span>
+    </div>
     <form id="login-form">
       <div class="input-group">
         <input type="password" id="password" placeholder="パスワードを入力してください" required>

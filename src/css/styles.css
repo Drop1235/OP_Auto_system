@@ -25,6 +25,23 @@ h1 {
   color: #333;
 }
 
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.app-name {
+  font-size: 22px;
+  font-weight: 600;
+  color: #28a745;
+}
+
 nav {
   display: flex;
   gap: 10px;

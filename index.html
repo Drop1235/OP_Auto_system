@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>テニストーナメント対戦表</title>
+  <title>MatchDrop - テニストーナメント対戦表</title>
   <link rel="stylesheet" href="src/css/styles.css">
   <link rel="stylesheet" href="src/css/tournament-modal.css">
+  <link rel="icon" href="assets/icon.png">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
 </head>
 <body>
@@ -23,7 +24,10 @@
   </div>
 
   <header>
-    <h1>テニストーナメント対戦表</h1>
+    <div class="app-brand">
+      <img src="assets/icon.png" alt="MatchDrop icon" class="logo-icon">
+      <span class="app-name">MatchDrop</span>
+    </div>
     <nav style="display: flex; align-items: center; gap: 8px;">
       <button id="board-view-btn" class="active">対戦表</button>
       <button id="history-view-btn">試合履歴</button>

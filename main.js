@@ -1,6 +1,21 @@
 const electron = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { nativeImage } = electron;
+
+// Ensure PNG version of app icon exists for web views
+const icoPath = path.join(__dirname, 'assets', 'icon.ico');
+const pngPath = path.join(__dirname, 'assets', 'icon.png');
+try {
+  if (!fs.existsSync(pngPath) && fs.existsSync(icoPath)) {
+    const img = nativeImage.createFromPath(icoPath);
+    if (!img.isEmpty()) {
+      fs.writeFileSync(pngPath, img.toPNG());
+    }
+  }
+} catch (e) {
+  console.error('Icon conversion error:', e);
+}
 
 // Extract required components from electron
 const { app, BrowserWindow, ipcMain, dialog, screen } = electron;
@@ -16,6 +31,7 @@ let mainWindow = null;
 // Create the browser window when Electron has finished initializing
 function createWindow() {
   mainWindow = new BrowserWindow({
+    icon: path.join(__dirname, 'assets', 'icon.ico'),
     width: 1200,
     height: 800,
     webPreferences: {
