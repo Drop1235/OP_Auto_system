@@ -213,7 +213,7 @@ class MatchCard {
           });
           
           this.updateDynamicElements();
-          this.checkLeagueWinCondition();
+          // this.checkLeagueWinCondition(); // updateMatchData内で呼ばれるため不要
         });
         
         setScoreInput.addEventListener('click', (e) => {
@@ -245,6 +245,7 @@ class MatchCard {
         this.match.scoreA = parseInt(e.target.value) || 0;
         this.updateMatchData({ scoreA: this.match.scoreA });
         this.updateDynamicElements();
+        console.log('[DEBUG] scoreA changed:', this.match.scoreA, 'gameFormat:', this.match.gameFormat);
         this.checkLeagueWinCondition();
       });
       
@@ -459,7 +460,7 @@ async updateMatchData(updatedData) {
     this.updateWinStatus();
     this.updateEndTimeDisplay();
     this.updateScoreInputsInteractivity();
-    this.checkLeagueWinCondition(); // スコアや試合形式変更後に勝敗条件を再チェック
+    // this.checkLeagueWinCondition(); // 無限ループ防止のため削除
 }
 
 updateWinStatus() {
@@ -512,65 +513,119 @@ shouldShowWin(player) {
   return this.match.winner === player;
 }
 
-async checkLeagueWinCondition() { // Renamed in thought process, but keeping for now
-  if (this.match.gameFormat === 'league') {
-    const scoreA = parseInt(this.match.scoreA) || 0;
-    const scoreB = parseInt(this.match.scoreB) || 0;
+async checkLeagueWinCondition() {
+    const format = (this.match.gameFormat || '').toLowerCase();
+    let scoreA = parseInt(this.match.scoreA, 10) || 0;
+    let scoreB = parseInt(this.match.scoreB, 10) || 0;
+    alert('[DEBUG] checkLeagueWinCondition called. format: ' + format + ' scoreA: ' + scoreA + ' scoreB: ' + scoreB);
+    const format = (this.match.gameFormat || '').toLowerCase();
+    let scoreA = parseInt(this.match.scoreA, 10) || 0;
+    let scoreB = parseInt(this.match.scoreB, 10) || 0;
+    let setA = 0, setB = 0;
+    if (this.match.setScores && Array.isArray(this.match.setScores.A) && Array.isArray(this.match.setScores.B)) {
+      setA = this.match.setScores.A.filter(x => x > 0).length;
+      setB = this.match.setScores.B.filter(x => x > 0).length;
+    }
     let newWinner = null;
     let newStatus = this.match.status;
 
-    if ((scoreA + scoreB) >= 5) {
-      if (scoreA > scoreB) newWinner = this.match.playerA;
-      else if (scoreB > scoreA) newWinner = this.match.playerB;
-      if (newWinner) newStatus = 'Win';
+    // 5G
+    if (format === '5game') {
+      if ((scoreA + scoreB) >= 5) {
+        if (scoreA > scoreB) newWinner = 'A';
+        else if (scoreB > scoreA) newWinner = 'B';
+        if (newWinner) newStatus = 'Win';
+      } else {
+        newWinner = null;
+        newStatus = 'Pending';
+      }
+    }
+    // 4G1set
+    else if (format === '4game1set') {
+      if (((scoreA === 4 || scoreB === 4) && Math.abs(scoreA - scoreB) >= 2) || scoreA === 5 || scoreB === 5) {
+        if (scoreA > scoreB) newWinner = 'A';
+        else if (scoreB > scoreA) newWinner = 'B';
+        if (newWinner) newStatus = 'Win';
+      } else {
+        newWinner = null;
+        newStatus = 'Pending';
+      }
+    }
+    // 6G1set
+    alert('[DEBUG] 6G1set分岐判定: ' + format + ' → ' + ['6game1set','6g1set','6ｇ1set'].includes(format));
+    else if (['6game1set','6g1set','6ｇ1set'].includes(format)) {
+      alert('[DEBUG] 6G1set判定: scoreA=' + scoreA + ' scoreB=' + scoreB);
+      if ((scoreA >= 6 || scoreB >= 6) && Math.abs(scoreA - scoreB) >= 2) {
+        console.log('[DEBUG] 6到達＆2差クリア');
+        if (scoreA > scoreB) newWinner = 'A';
+        else if (scoreB > scoreA) newWinner = 'B';
+        if (newWinner) newStatus = 'Win';
+      } else if (scoreA === 7 || scoreB === 7) {
+        console.log('[DEBUG] 7到達で即勝利');
+        if (scoreA > scoreB) newWinner = 'A';
+        else if (scoreB > scoreA) newWinner = 'B';
+        if (newWinner) newStatus = 'Win';
+      } else {
+        console.log('[DEBUG] どちらも勝利条件未達');
+        newWinner = null;
+        newStatus = 'Pending';
+      }
+    }
+    // 8G-Pro
+    else if (format === '8game1set' || format === '8game-pro') {
+      if (((scoreA === 8 || scoreB === 8) && Math.abs(scoreA - scoreB) >= 2) || scoreA === 9 || scoreB === 9) {
+        if (scoreA > scoreB) newWinner = 'A';
+        else if (scoreB > scoreA) newWinner = 'B';
+        if (newWinner) newStatus = 'Win';
+      } else {
+        newWinner = null;
+        newStatus = 'Pending';
+      }
+    }
+    // 4G2set+10MTB, 6G2set+10MTB, 4G3set, 6G3set
+    else if ([
+      '4game2set+10mtb', '6game2set+10mtb', '4game3set', '6game3set',
+      '4G2set+10MTB', '6G2set+10MTB', '4G3set', '6G3set'
+    ].includes(format)) {
+      // セットカウントが2とった方
+      let countA = 0, countB = 0;
+      if (this.match.setScores && Array.isArray(this.match.setScores.A) && Array.isArray(this.match.setScores.B)) {
+        for (let i = 0; i < 3; i++) {
+          const a = this.match.setScores.A[i] || 0;
+          const b = this.match.setScores.B[i] || 0;
+          if (a === 0 && b === 0) continue;
+          if (a > b) countA++;
+          else if (b > a) countB++;
+        }
+      }
+      if (countA === 2) {
+        newWinner = 'A';
+        newStatus = 'Win';
+      } else if (countB === 2) {
+        newWinner = 'B';
+        newStatus = 'Win';
+      } else {
+        newWinner = null;
+        newStatus = 'Pending';
+      }
     } else {
-      newWinner = null; // Reset winner if score drops below threshold
-      newStatus = 'Pending'; // Reset status
+      // その他形式は手動または従来ロジック
+      newWinner = this.match.winner || null;
+      newStatus = this.match.status || 'Pending';
     }
+
+    // 変更があれば反映
     if (this.match.winner !== newWinner || this.match.status !== newStatus) {
-       const updatePayload = { winner: newWinner, status: newStatus };
-       if (newWinner && !this.match.actualEndTime) { // 勝者が決まり、かつ終了時刻がまだ設定されていない場合
-         updatePayload.actualEndTime = new Date().toISOString();
-       }
-       this.updateMatchData(updatePayload); // updateMatchData内でactualEndTimeが設定される
+      this.match.winner = newWinner;
+      this.match.status = newStatus;
+      if (newWinner && !this.match.actualEndTime) {
+        this.match.actualEndTime = new Date().toISOString();
+      }
+      this.updateWinStatus();
+      this.updateEndTimeDisplay();
+      this.updateScoreInputsInteractivity();
     }
-  } else if (this.match.gameFormat === 'playoff') {
-      let newWinner = null;
-      let newStatus = 'Pending'; // Default to pending
-
-      if (this.shouldShowWin('A')) {
-        newWinner = this.match.playerA;
-        newStatus = 'Win';
-      } else if (this.shouldShowWin('B')) {
-        newWinner = this.match.playerB;
-        newStatus = 'Win';
-      }
-      // If neither player is shown as a winner, but scores might imply a completed game without a clear win (e.g. scores reset)
-      // we might need additional logic here if status should change from 'Win' back to 'Pending'
-      // For now, if no one is winning, winner remains as is or null, status might go to Pending if not already Win.
-      if (newWinner === null && this.match.status === 'Win') {
-        // If previously was 'Win' but now no one is winning according to shouldShowWin
-        // (e.g. score was changed making it no longer a win), reset status.
-        // Keep actualEndTime as it was, user can manually clear it if needed.
-        newStatus = 'Pending'; 
-      }
-
-      if (this.match.winner !== newWinner || this.match.status !== newStatus) {
-        const updatePayload = { winner: newWinner, status: newStatus };
-        if (newWinner && !this.match.actualEndTime) { // If a new winner is determined and no end time is set
-          updatePayload.actualEndTime = new Date().toISOString();
-        } else if (newWinner === null && this.match.status === 'Win' && newStatus === 'Pending') {
-          // If winner is removed (e.g. score changed), we don't automatically clear actualEndTime here.
-          // User might want to keep it or clear it manually.
-        }
-        // Only call updateMatchData if there's a change in winner or status
-        // updateMatchData will then call checkLeagueWinCondition again, ensure no infinite loop
-        if (this.match.winner !== updatePayload.winner || this.match.status !== updatePayload.status || (updatePayload.actualEndTime && this.match.actualEndTime !== updatePayload.actualEndTime)) {
-             this.updateMatchData(updatePayload); // Pass the payload to updateMatchData
-        }
-      }
-  }
-  // this.updateWinStatus(); // Called from updateMatchData
+  
 } // End of checkLeagueWinCondition
 
 setupDragAndDrop() {

@@ -1,7 +1,8 @@
 // Database implementation using localStorage for offline storage
 class TennisMatchDatabase {
   constructor() {
-    this.storageKey = 'tennisTournamentMatches';
+    this.tournamentId = localStorage.getItem('currentTournamentId') || 'default';
+    this.storageKey = 'tennisTournamentMatches_' + this.tournamentId;
     this.matches = [];
     this.nextId = 1;
     this.db = {}; // Compatibility placeholder
@@ -20,6 +21,9 @@ class TennisMatchDatabase {
       console.log('Initializing database...');
       
       // Load existing matches from localStorage
+      // 大会IDが途中で変わる場合に備えて毎回取得
+      this.tournamentId = localStorage.getItem('currentTournamentId') || 'default';
+      this.storageKey = 'tennisTournamentMatches_' + this.tournamentId;
       const storedData = localStorage.getItem(this.storageKey);
       if (storedData) {
         try {
@@ -67,6 +71,9 @@ class TennisMatchDatabase {
         matches: this.matches,
         nextId: this.nextId
       };
+      // 保存先キーを大会ごとに分離
+      this.tournamentId = localStorage.getItem('currentTournamentId') || 'default';
+      this.storageKey = 'tennisTournamentMatches_' + this.tournamentId;
       localStorage.setItem(this.storageKey, JSON.stringify(dataToStore));
       return true;
     } catch (error) {
@@ -78,26 +85,48 @@ class TennisMatchDatabase {
   // Add a new match
   async addMatch(match) {
     try {
+      // 既存のIDがある場合はそれを使用、ない場合は新しいIDを生成
+      const matchId = match.id || this.nextId++;
+      
+      // IDが既に存在する場合は、nextIdを更新
+      if (match.id && match.id >= this.nextId) {
+        this.nextId = match.id + 1;
+      }
+      
       // Create a new match with default values
       const newMatch = {
-        id: this.nextId++,
+        id: matchId,
         playerA: match.playerA,
         playerB: match.playerB,
         gameFormat: match.gameFormat || '5game', // 試合形式を追加
         scheduledStartTime: match.scheduledStartTime,
-        actualStartTime: null,
-        actualEndTime: null,
+        actualStartTime: match.actualStartTime || null,
+        actualEndTime: match.actualEndTime || null,
         status: match.status || 'Unassigned',
         courtNumber: match.courtNumber || null,
         rowPosition: match.rowPosition || null,
-        tiebreakScore: null, // タイブレークスコア（負けた方のスコアのみ）
-        createdAt: new Date().toISOString()
+        scoreA: match.scoreA || '',
+        scoreB: match.scoreB || '',
+        setScores: match.setScores || { A: [], B: [] },
+        tieBreakA: match.tieBreakA || '',
+        tieBreakB: match.tieBreakB || '',
+        winner: match.winner || null,
+        memo: match.memo || '',
+        tiebreakScore: match.tiebreakScore || null, // タイブレークスコア（負けた方のスコアのみ）
+        createdAt: match.createdAt || new Date().toISOString()
       };
       
       console.log('[DATABASE] Adding new match with game format:', newMatch.gameFormat);
       
-      // Add to matches array
-      this.matches.push(newMatch);
+      // 既存のマッチに同じIDがないかチェック
+      const existingIndex = this.matches.findIndex(m => m.id === matchId);
+      if (existingIndex !== -1) {
+        console.log('[DATABASE] Match with same ID already exists, updating instead');
+        this.matches[existingIndex] = newMatch;
+      } else {
+        // Add to matches array
+        this.matches.push(newMatch);
+      }
       
       // Save to localStorage
       this._saveToStorage();
@@ -116,7 +145,10 @@ class TennisMatchDatabase {
       const index = this.matches.findIndex(m => m.id === match.id);
       
       if (index === -1) {
-        throw new Error('Match not found');
+        console.warn(`[DATABASE] Match with ID ${match.id} not found, attempting to add as new match`);
+        // マッチが見つからない場合は新しいマッチとして追加
+        const newMatch = await this.addMatch(match);
+        return newMatch;
       }
       
       // Update match properties
@@ -132,13 +164,20 @@ class TennisMatchDatabase {
       return updatedMatch;
     } catch (error) {
       console.error('Error updating match:', error);
-      throw new Error('Failed to update match');
+      // エラーが発生してもアプリケーションを停止させない
+      console.warn('Continuing without database update for match:', match.id);
+      return match; // 元のマッチデータを返す
     }
   }
 
   // Get all matches
   async getAllMatches() {
-    return [...this.matches];
+    return [...this.matches]; // Return a copy to prevent direct modification
+  }
+
+  // Get a specific match by ID
+  getMatch(id) {
+    return this.matches.find(match => match.id === id);
   }
 
   // Get matches by status
@@ -189,10 +228,28 @@ class TennisMatchDatabase {
       // Save to localStorage
       this._saveToStorage();
       
+      console.log('Match deleted successfully');
       return true;
     } catch (error) {
       console.error('Error deleting match:', error);
-      throw new Error('Failed to delete match');
+      return false;
+    }
+  }
+
+  // Delete all matches
+  async deleteAllMatches() {
+    try {
+      // Clear all matches
+      this.matches = [];
+      
+      // Save to localStorage
+      this._saveToStorage();
+      
+      console.log('All matches deleted successfully');
+      return true;
+    } catch (error) {
+      console.error('Error deleting all matches:', error);
+      return false;
     }
   }
 }

@@ -5,14 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>テニストーナメント対戦表</title>
   <link rel="stylesheet" href="src/css/styles.css">
+  <link rel="stylesheet" href="src/css/tournament-modal.css">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
 </head>
 <body>
+  <!-- 新規大会名入力モーダル -->
+  <div id="tournament-modal">
+    <div class="modal-content">
+      <h2>新規大会作成</h2>
+      <label for="tournament-name-input">大会名を入力してください</label>
+      <input type="text" id="tournament-name-input" maxlength="30" autocomplete="off" />
+      <div class="modal-btns">
+        <button class="ok-btn" id="tournament-modal-ok">OK</button>
+        <button class="cancel-btn" id="tournament-modal-cancel">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
   <header>
     <h1>テニストーナメント対戦表</h1>
-    <nav>
+    <nav style="display: flex; align-items: center; gap: 8px;">
       <button id="board-view-btn" class="active">対戦表</button>
       <button id="history-view-btn">試合履歴</button>
+      <label for="tournament-select" style="margin-left: 16px;">大会:</label>
+      <select id="tournament-select" style="min-width: 150px;"></select>
+      <button id="add-tournament-btn" style="background-color: #2196f3; color: #fff;">新規大会</button>
+      <button id="delete-tournament-btn" title="大会を削除" style="background: none; border: none; cursor: pointer; font-size: 1.3em; color: #f44336; padding: 0 8px;">🗑️</button>
       <button id="logout-btn" style="margin-left: auto; background-color: #f44336;">ログアウト</button>
     </nav>
   </header>
@@ -24,11 +42,12 @@
       <div id="court-settings" class="court-settings">
         <div class="court-settings-header">
           <button id="add-match-btn" class="add-match-btn-prominent">試合追加</button>
-          <div class="court-count-controls">
+          <div class="court-count-controls" style="margin-left:auto; margin-right:8px;">
             <button id="decrease-courts-btn">-</button>
             <span id="court-count-display" class="court-count-display">12</span>
             <button id="increase-courts-btn">+</button>
-          </div>
+          
+          <button id="delete-all-matches-btn" class="delete-all-btn">全削除</button>
         </div>
       </div>
       <div id="court-grid" class="court-grid"></div>

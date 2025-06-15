@@ -11,7 +11,7 @@ class Board {
     this.courtCountDisplay = document.getElementById('court-count-display');
     this.decreaseCourtsBtn = document.getElementById('decrease-courts-btn');
     this.increaseCourtsBtn = document.getElementById('increase-courts-btn');
-
+    this.deleteAllMatchesBtn = document.getElementById('delete-all-matches-btn');
     
     // ローカルストレージからコート名を読み込む
     this.loadCourtNames();
@@ -322,10 +322,25 @@ class Board {
     if (this.decreaseCourtsBtn) {
       this.decreaseCourtsBtn.addEventListener('click', () => {
         if (this.numberOfCourts > 1) {
-          this.numberOfCourts--;
-          this.createCourtGrid();
-          this.loadMatches();
-          this.updateCourtSelectOptions();
+          // 削除されるコートにマッチカードがあるかチェック
+          const matchesInLastCourt = this.getMatchesInCourt(this.numberOfCourts);
+          
+          if (matchesInLastCourt.length > 0) {
+            // 確認ダイアログを表示
+            const confirmMessage = `コート${this.numberOfCourts}に${matchesInLastCourt.length}件のマッチカードがあります。\nコートを減らすとこれらのマッチカードの履歴も削除されますがよろしいですか？`;
+            
+            if (confirm(confirmMessage)) {
+              // ユーザーがOKした場合、該当するマッチを削除
+              this.deleteMatchesInCourt(this.numberOfCourts);
+              this.numberOfCourts--;
+              this.updateCourtGrid();
+            }
+            // ユーザーがキャンセルした場合は何もしない
+          } else {
+            // 削除されるコートにマッチカードがない場合はそのまま減らす
+            this.numberOfCourts--;
+            this.updateCourtGrid();
+          }
         }
       });
     }
@@ -334,15 +349,123 @@ class Board {
       this.increaseCourtsBtn.addEventListener('click', () => {
         if (this.numberOfCourts < 24) { // 最大24コートまで
           this.numberOfCourts++;
-          this.createCourtGrid();
-          this.loadMatches();
-          this.updateCourtSelectOptions();
+          this.updateCourtGrid();
+        }
+      });
+    }
+    
+    if (this.deleteAllMatchesBtn) {
+      this.deleteAllMatchesBtn.addEventListener('click', () => {
+        // 現在のマッチカード数を取得
+        const matchCount = this.matchCards.size;
+        
+        if (matchCount === 0) {
+          alert('削除するマッチカードがありません。');
+          return;
+        }
+        
+        // 確認ダイアログを表示
+        const confirmMessage = `全ての試合カード（${matchCount}件）を削除しますがよろしいですか？\nこの操作は取り消せません。`;
+        
+        if (confirm(confirmMessage)) {
+          // ユーザーがOKした場合、全マッチカードを削除
+          this.deleteAllMatches();
         }
       });
     }
 
   }
-  
+
+  // コートグリッドを更新（既存のマッチカードデータを保持）
+  updateCourtGrid() {
+    console.log('[BOARD] updateCourtGrid called');
+    
+    // 現在のマッチカードの状態を保存
+    const currentMatchStates = new Map();
+    console.log('[BOARD] Current matchCards size:', this.matchCards.size);
+    
+    this.matchCards.forEach((matchCard, matchId) => {
+      console.log('[BOARD] Processing matchCard ID:', matchId, 'matchCard:', matchCard);
+      
+      if (matchCard && matchCard.match) {
+        // スコアやその他の状態を保存
+        const scoreA = matchCard.getScoreA ? matchCard.getScoreA() : matchCard.match.scoreA;
+        const scoreB = matchCard.getScoreB ? matchCard.getScoreB() : matchCard.match.scoreB;
+        const setScores = matchCard.getSetScores ? matchCard.getSetScores() : matchCard.match.setScores;
+        const tiebreakScore = matchCard.getTiebreakScore ? matchCard.getTiebreakScore() : {
+          A: matchCard.match.tieBreakA || '',
+          B: matchCard.match.tieBreakB || ''
+        };
+        
+        console.log('[BOARD] Saving state for match', matchId, '- ScoreA:', scoreA, 'ScoreB:', scoreB);
+        
+        const currentState = {
+          ...matchCard.match,
+          scoreA: scoreA,
+          scoreB: scoreB,
+          setScores: setScores,
+          tieBreakA: tiebreakScore.A,
+          tieBreakB: tiebreakScore.B,
+          winner: matchCard.match.winner
+        };
+        currentMatchStates.set(matchId, currentState);
+      }
+    });
+
+    console.log('[BOARD] Saved states count:', currentMatchStates.size);
+
+    // マッチカードマップをクリア
+    this.matchCards.clear();
+
+    // コートグリッドを再作成
+    this.createCourtGrid();
+    
+    // 保存した状態でマッチカードを復元
+    currentMatchStates.forEach((matchState, matchId) => {
+      console.log('[BOARD] Restoring match', matchId, 'with scoreA:', matchState.scoreA, 'scoreB:', matchState.scoreB);
+      
+      // データベースから最新のマッチデータを取得
+      let matchData = null;
+      if (window.db) {
+        try {
+          matchData = window.db.getMatch(matchId);
+        } catch (error) {
+          console.warn('Failed to get match from database:', error);
+        }
+      }
+      
+      // マッチデータが見つからない場合は、保存された状態をそのまま使用
+      if (!matchData) {
+        matchData = matchState;
+      } else {
+        // データベースのマッチデータに保存されたスコア値をマージ
+        matchData.scoreA = matchState.scoreA;
+        matchData.scoreB = matchState.scoreB;
+        matchData.setScores = matchState.setScores;
+        matchData.tieBreakA = matchState.tieBreakA;
+        matchData.tieBreakB = matchState.tieBreakB;
+        matchData.winner = matchState.winner;
+        
+        console.log('[BOARD] Merged match data:', matchData);
+      }
+      
+      // データベースの該当マッチも更新
+      if (window.db) {
+        window.db.updateMatch(matchData).catch(error => {
+          console.warn('Failed to update match in database during court grid update:', error);
+        });
+      }
+      
+      // マッチカードを再作成して配置
+      this.createAndPlaceMatchCard(matchData);
+    });
+    
+    // コート選択オプションを更新
+    this.updateCourtSelectOptions();
+    
+    console.log('[BOARD] updateCourtGrid completed');
+  }
+
   // コート名をクリックした時の処理
   handleCourtNameClick(event) {
     const span = event.target;
@@ -557,7 +680,7 @@ class Board {
       
       // 新しい位置に配置
       if (!newCourtNumber || !newRowPosition) {
-        // 未割当の場合は未割当エリアに配置
+        // 未割当の場合は未割当カードエリアに配置
         const unassignedCards = document.getElementById('unassigned-cards');
         if (unassignedCards) {
           unassignedCards.appendChild(existingCard.element);
@@ -612,6 +735,7 @@ class Board {
   }
 
   getOccupiedRowPositions(courtNumber) {
+    // 修正: カードが削除された後も正しく位置を取得できるようにする
     const occupiedPositions = [];
     if (!courtNumber) { // If courtNumber is null or undefined (e.g., "Unassigned" court)
       return []; // No specific positions are occupied for "Unassigned" court
@@ -619,14 +743,91 @@ class Board {
 
     const numericCourtNumber = parseInt(courtNumber);
 
-    for (const card of this.matchCards.values()) {
-      if (card.match.courtNumber === numericCourtNumber && card.match.rowPosition) {
-        // Ensure rowPosition is one of the valid types before adding
-        if (['current', 'next', 'next2'].includes(card.match.rowPosition)) {
-          occupiedPositions.push(card.match.rowPosition);
+    // 実際のDOMから現在の状態を確認する
+    const courtSlot = document.querySelector(`.court-slot[data-court-number="${numericCourtNumber}"]`);
+    if (courtSlot) {
+      const rows = courtSlot.querySelectorAll('.court-row');
+      rows.forEach(row => {
+        const rowType = row.dataset.rowType;
+        // カードコンテナ内のカードを確認
+        const cardContainer = row.querySelector('.card-container');
+        const hasCard = cardContainer && cardContainer.querySelector('.match-card');
+        
+        // カードがない場合は空き状態と判断
+        if (!hasCard && ['current', 'next', 'next2'].includes(rowType)) {
+          // 空き状態なのでoccupiedPositionsには追加しない
+        } else if (hasCard && ['current', 'next', 'next2'].includes(rowType)) {
+          occupiedPositions.push(rowType);
+        }
+      });
+    }
+    
+    return [...new Set(occupiedPositions)]; // Return unique positions
+  }
+
+  // コートに配置されているマッチカードを取得
+  getMatchesInCourt(courtNumber) {
+    const matches = [];
+    this.matchCards.forEach((matchCard, matchId) => {
+      if (matchCard.match.courtNumber === courtNumber) {
+        matches.push(matchCard.match);
+      }
+    });
+    return matches;
+  }
+
+  // コートに配置されているマッチカードを削除
+  deleteMatchesInCourt(courtNumber) {
+    this.matchCards.forEach((matchCard, matchId) => {
+      if (matchCard.match.courtNumber === courtNumber) {
+        // UI要素を削除
+        matchCard.element.remove();
+        
+        // データベースからも削除
+        if (window.db) {
+          window.db.deleteMatch(matchId).catch(error => {
+            console.warn('Failed to delete match from database:', error);
+          });
+        }
+        
+        // マッチカードマップから削除
+        this.matchCards.delete(matchId);
+      }
+    });
+  }
+
+  // 全マッチカードを削除（UIブロックを回避するためにアイドル時間で分割実行）
+  deleteAllMatches() {
+    const allCards = Array.from(document.querySelectorAll('.match-card'));
+    const BATCH_SIZE = 200; // 一度に削除するカード数
+    const removeBatch = (start = 0) => {
+      const end = Math.min(start + BATCH_SIZE, allCards.length);
+      for (let i = start; i < end; i++) {
+        allCards[i].remove();
+      }
+      if (end < allCards.length) {
+        // 残りがあれば次のアイドルタイムで続行
+        if (window.requestIdleCallback) {
+          requestIdleCallback(() => removeBatch(end));
+        } else {
+          setTimeout(() => removeBatch(end), 0);
+        }
+      } else {
+        // すべて削除完了
+        this.matchCards.clear();
+        // データベース削除は UI 操作が落ち着いた後のアイドルタイムで実行
+        const deleteDb = () => {
+          if (window.db) {
+            window.db.deleteAllMatches().catch(err => console.warn('Failed to delete all matches from database:', err));
+          }
+        };
+        if (window.requestIdleCallback) {
+          requestIdleCallback(deleteDb);
+        } else {
+          setTimeout(deleteDb, 0);
         }
       }
-    }
-    return [...new Set(occupiedPositions)]; // Return unique positions
+    };
+    removeBatch();
   }
 }
