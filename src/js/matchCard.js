@@ -652,14 +652,16 @@ class MatchCard {
     if (format === '5game' && ((scoreA === 5 && scoreB === 4) || (scoreA === 4 && scoreB === 5))) {
       showTiebreak = true;
     }
-    // 6game1set or 6game3set format
-    else if ((format === '6game1set' || format === '6game3set') && 
-             ((scoreA === 7 && scoreB === 6) || (scoreA === 6 && scoreB === 7))) {
-      showTiebreak = true;
+    // 単セット形式のTB表示条件
+    let shouldShowSingle = false;
+    if (format === '6game1set') {
+      shouldShowSingle = ( (scoreA === 7 && scoreB === 6) || (scoreA === 6 && scoreB === 7) );
+    } else if (format === '4game1set') {
+      shouldShowSingle = ( (scoreA === 5 && scoreB === 4) || (scoreA === 4 && scoreB === 5) );
+    } else if (format === '8game1set') {
+      shouldShowSingle = ( (scoreA === 9 && scoreB === 8) || (scoreA === 8 && scoreB === 9) );
     }
-    // 8game1set format
-    else if (format === '8game1set' && 
-             ((scoreA === 9 && scoreB === 8) || (scoreA === 8 && scoreB === 9))) {
+    if (shouldShowSingle) {
       showTiebreak = true;
     }
     // Add more conditions if other formats also have tiebreaks under specific scores
@@ -861,6 +863,102 @@ async checkLeagueWinCondition() {
       return;
     }
 
+    // 5G形式の勝者判定（合計5ゲーム到達で多い方が勝ち）
+    if (format.includes('5g') || this.match.gameFormat === '5game') {
+      if (scoreAEntered && scoreBEntered) {
+        const total = scoreA + scoreB;
+        let newWinner = null;
+        let newStatus = this.match.status;
+        if (total >= 5) {
+          if (scoreA > scoreB) newWinner = 'A';
+          else if (scoreB > scoreA) newWinner = 'B';
+          if (newWinner) newStatus = 'Win';
+        } else {
+          newWinner = null;
+          newStatus = 'Pending';
+        }
+        if (this.match.winner !== newWinner || this.match.status !== newStatus) {
+          const updatePayload = { winner: newWinner, status: newStatus };
+          if (newWinner && !this.match.actualEndTime) {
+            updatePayload.actualEndTime = new Date().toISOString();
+          } else if (!newWinner) {
+            updatePayload.actualEndTime = null;
+          }
+          this.updateMatchData(updatePayload);
+          this.updateWinStatus();
+          this.updateEndTimeDisplay();
+        }
+      }
+      // 5G判定後は続行せずに下の6G判定に落ちることなく終了
+      return;
+    }
+
+    // 8G1set形式の勝者判定
+    if (format.includes('8g') || format.includes('8game')) {
+      if (scoreAEntered && scoreBEntered) {
+        let newWinner = null;
+        let newStatus = this.match.status;
+        // 8ゲームかつ2ゲーム差
+        if ((scoreA >= 8 || scoreB >= 8) && Math.abs(scoreA - scoreB) >= 2) {
+          if (scoreA > scoreB) newWinner = 'A';
+          else if (scoreB > scoreA) newWinner = 'B';
+          if (newWinner) newStatus = 'Win';
+        }
+        // 9ゲーム到達で即勝利
+        else if (scoreA >= 9 || scoreB >= 9) {
+          if (scoreA > scoreB) newWinner = 'A';
+          else if (scoreB > scoreA) newWinner = 'B';
+          if (newWinner) newStatus = 'Win';
+        }
+        if (this.match.winner !== newWinner || this.match.status !== newStatus) {
+          const updatePayload = { winner: newWinner, status: newStatus };
+          if (newWinner && !this.match.actualEndTime) {
+            updatePayload.actualEndTime = new Date().toISOString();
+          } else if (!newWinner) {
+            updatePayload.actualEndTime = null;
+          }
+          this.updateMatchData(updatePayload);
+          this.updateWinStatus();
+          this.updateEndTimeDisplay();
+        }
+      }
+      // 8G判定後は処理終了
+      return;
+    }
+
+    // 4G1set形式の勝者判定
+    if (format.includes('4g') || format.includes('4game')) {
+      if (scoreAEntered && scoreBEntered) {
+        let newWinner = null;
+        let newStatus = this.match.status;
+        // 4ゲームかつ2ゲーム差
+        if ((scoreA >= 4 || scoreB >= 4) && Math.abs(scoreA - scoreB) >= 2) {
+          if (scoreA > scoreB) newWinner = 'A';
+          else if (scoreB > scoreA) newWinner = 'B';
+          if (newWinner) newStatus = 'Win';
+        }
+        // 5ゲーム到達で即勝利
+        else if (scoreA >= 5 || scoreB >= 5) {
+          if (scoreA > scoreB) newWinner = 'A';
+          else if (scoreB > scoreA) newWinner = 'B';
+          if (newWinner) newStatus = 'Win';
+        }
+        if (this.match.winner !== newWinner || this.match.status !== newStatus) {
+          const updatePayload = { winner: newWinner, status: newStatus };
+          if (newWinner && !this.match.actualEndTime) {
+            updatePayload.actualEndTime = new Date().toISOString();
+          } else if (!newWinner) {
+            updatePayload.actualEndTime = null;
+          }
+          this.updateMatchData(updatePayload);
+          this.updateWinStatus();
+          this.updateEndTimeDisplay();
+        }
+      }
+      // 4G判定後は処理終了
+      return;
+    }
+
     // 6G1set形式の勝者判定
     if (format.includes('6g') || format.includes('6game')) {
       showDebug('[DEBUG] 6G1set判定: scoreA=' + scoreA + ' scoreB=' + scoreB);
@@ -897,19 +995,20 @@ async checkLeagueWinCondition() {
         newStatus = 'Pending';
       }
       
-      // 勝者・ステータス変更があれば直接this.matchに代入しUI更新
+      // 勝者・ステータス変更があればDB経由で一括更新（終了時刻含む）
       if (this.match.winner !== newWinner || this.match.status !== newStatus) {
         showDebug('[DEBUG] 勝者変更: ' + this.match.winner + ' → ' + newWinner);
-        this.match.winner = newWinner;
-        this.match.status = newStatus;
-        this.updateWinStatus();
-        this.updateEndTimeDisplay();
-        
-        // データベースに保存
-        const db = window.db;
-        if (db) {
-          db.updateMatch(this.match.id, { winner: newWinner, status: newStatus });
+
+        const updatePayload = { winner: newWinner, status: newStatus };
+        // 勝者確定時に終了時刻を自動設定 / 取り消し時はクリア
+        if (newWinner && !this.match.actualEndTime) {
+          updatePayload.actualEndTime = new Date().toISOString();
+        } else if (!newWinner) {
+          updatePayload.actualEndTime = null;
         }
+
+        // updateMatchData は DB 更新・UI 更新を内包するユーティリティ
+        this.updateMatchData(updatePayload);
       }
       
       return; // 6G1set判定後は処理終了
