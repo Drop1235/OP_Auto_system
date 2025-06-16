@@ -452,9 +452,9 @@ class MatchCard {
     const tiebreakRow = document.createElement('div');
     tiebreakRow.className = 'tiebreak-row';
     tiebreakRow.style.display = 'flex'; // 常時表示行（個別ラッパーをトグル）
-    tiebreakRow.style.justifyContent = 'flex-start';
+    tiebreakRow.style.justifyContent = 'flex-end';
     tiebreakRow.style.gap = '8px';
-    tiebreakRow.style.marginLeft = '40px';
+    tiebreakRow.style.marginRight = '40px';
 
     this.tiebreakWrappers = [];
     this.tiebreakInputs = [];

@@ -298,7 +298,28 @@ class Board {
       this.handleMatchUpdate(match);
     });
     
-    // Listen for new matches
+    // Listen for deleted matches
+  document.addEventListener('match-deleted', (e) => {
+    const { matchId } = e.detail;
+    console.log('[BOARD] Received match-deleted event for match ID:', matchId);
+
+    // Remove from map
+    if (this.matchCards.has(matchId)) {
+      const matchCard = this.matchCards.get(matchId);
+      // Ensure UI element is removed (safety)
+      if (matchCard && matchCard.element) {
+        matchCard.element.remove();
+      }
+      this.matchCards.delete(matchId);
+    }
+
+    // そのコートのプレースホルダー表示を更新
+    if (e.detail.courtNumber) {
+      this.showPlaceholderIfEmpty(e.detail.courtNumber, e.detail.rowPosition);
+    }
+  });
+
+  // Listen for new matches
     document.addEventListener('match-added', (e) => {
       const { match } = e.detail;
       console.log('[BOARD] Received match-added event for match ID:', match.id, match);
