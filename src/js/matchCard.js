@@ -16,10 +16,15 @@ class MatchCard {
     this.scoresB = this._parseScores(this.match.scoreB, numSets);
 
     // setScores が未定義、または長さが一致しない場合は、パース結果で上書き
+    // まず setScores を整形し、その後 合計セット数 (wins) を計算して scoreA / scoreB に反映させる
     this.match.setScores = {
       A: [...this.scoresA],
       B: [...this.scoresB]
     };
+
+    // setScores から勝ったセット数 (winsA / winsB) を算出し、scoreA / scoreB に反映
+    // これによりカード生成直後でも正しいセットカウントが表示される
+    this.calculateTotalScore();
 
     // 旧ロジック互換のため scoreA / scoreB 文字列も整形して保持
     this.match.scoreA = this._stringifyScores(this.scoresA);
@@ -58,6 +63,9 @@ class MatchCard {
     this.updateWinStatus(); 
     this.updateEndTimeDisplay();
     this.addDoubleClickToHistoryListener();
+
+    // 初期表示時点で勝敗・終了時刻が正しく反映されるように判定実行
+    this.checkLeagueWinCondition();
   }
 
   _getNumberOfSets() {
@@ -66,11 +74,9 @@ class MatchCard {
       // BO3（3セット先取）
       case '4game3set':
       case '6game3set':
-        return 3;
-      // BO3（2セット先取）
+      case '6game2set': // 6G2set+10MTB→1,2セットは6 or 7 先取、3セット目はMTB10
       case '4game2set':
-      case '6game2set':
-        return 2;
+        return 3;
       // それ以外（ワンセットマッチ等）
       default:
         return 1;
@@ -213,7 +219,11 @@ class MatchCard {
     // プレイヤー名の入力欄をそのまま追加
     playerADiv.appendChild(playerAInput);
     
-    // スコア入力A
+    // TB配列を初期化
+  if (!this.setTiebreakElemsA) {
+    this.setTiebreakElemsA = [];
+  }
+  // スコア入力A
     if (this.match.gameFormat === '6game3set' || this.match.gameFormat === '4game3set' || 
         this.match.gameFormat === '4game2set' || this.match.gameFormat === '6game2set') {
       // BO3形式の場合は3セット分のスコア入力欄を表示
@@ -256,7 +266,47 @@ class MatchCard {
           e.stopPropagation();
         });
         
-        setScoresContainerA.appendChild(setScoreInput);
+        // セットスコアとタイブレーク入力を横並びで配置するラッパー
+        const setWrapperA = document.createElement('div');
+        setWrapperA.style.display = 'flex';
+        setWrapperA.style.flexDirection = 'column';
+        setWrapperA.style.display = 'flex';
+        setWrapperA.style.alignItems = 'center';
+        setWrapperA.style.gap = '2px';
+        setWrapperA.appendChild(setScoreInput);
+
+        // タイブレーク用入力
+        const tbOpenA = document.createElement('span');
+        tbOpenA.textContent = '(';
+        tbOpenA.style.fontSize = '0.8em';
+
+        const setTiebreakInputA = document.createElement('input');
+        setTiebreakInputA.type = 'number';
+        setTiebreakInputA.min = '0';
+        setTiebreakInputA.max = '99';
+        setTiebreakInputA.className = 'set-tiebreak-input';
+        setTiebreakInputA.dataset.player = 'A';
+        setTiebreakInputA.dataset.set = i;
+        setTiebreakInputA.style.width = '26px';
+        setTiebreakInputA.style.fontSize = '0.7em';
+        setTiebreakInputA.placeholder = 'TB';
+
+        const tbCloseA = document.createElement('span');
+        tbCloseA.textContent = ')';
+        tbCloseA.style.fontSize = '0.8em';
+
+        // まだデータモデルにセット単位のTBを保持していないため、ここではUIのみに留める
+        setTiebreakInputA.addEventListener('click', e => e.stopPropagation());
+
+        setWrapperA.appendChild(tbOpenA);
+        setWrapperA.appendChild(setTiebreakInputA);
+        setWrapperA.appendChild(tbCloseA);
+        // TB 初期表示は非表示 (7-6 / 6-7 で表示切替)
+        [tbOpenA,setTiebreakInputA,tbCloseA].forEach(el=>el.style.display='none');
+        // 配列へ格納
+        this.setTiebreakElemsA[i] = [tbOpenA,setTiebreakInputA,tbCloseA];
+
+        setScoresContainerA.appendChild(setWrapperA);
       }
       
       playerADiv.appendChild(setScoresContainerA);
@@ -454,7 +504,33 @@ class MatchCard {
           e.stopPropagation();
         });
         
-        setScoresContainerB.appendChild(setScoreInput);
+        // セットスコア入力をそのまま追加（タイブレーク欄はA側にのみ表示）
+        const setWrapperB = document.createElement('div');
+        setWrapperB.style.display = 'flex';
+        setWrapperB.style.flexDirection = 'column';
+        setWrapperB.style.alignItems = 'center';
+        setWrapperB.appendChild(setScoreInput);
+        // 幅合わせのために見えないタイブレーク用プレースホルダーを追加
+        const hiddenTbOpen = document.createElement('span');
+        hiddenTbOpen.textContent = '(';
+        hiddenTbOpen.style.fontSize = '0.8em';
+        hiddenTbOpen.style.visibility = 'hidden';
+
+        const hiddenTbInput = document.createElement('input');
+        hiddenTbInput.type = 'number';
+        hiddenTbInput.style.width = '26px';
+        hiddenTbInput.style.visibility = 'hidden';
+
+        const hiddenTbClose = document.createElement('span');
+        hiddenTbClose.textContent = ')';
+        hiddenTbClose.style.fontSize = '0.8em';
+        hiddenTbClose.style.visibility = 'hidden';
+
+        setWrapperB.appendChild(hiddenTbOpen);
+        setWrapperB.appendChild(hiddenTbInput);
+        setWrapperB.appendChild(hiddenTbClose);
+
+        setScoresContainerB.appendChild(setWrapperB);
       }
       
       playerBDiv.appendChild(setScoresContainerB);
@@ -622,24 +698,56 @@ class MatchCard {
     } else if (player === 'B') {
       this.match.tieBreakB = score;
       this.updateMatchData({ tieBreakB: this.match.tieBreakB });
-    }
-    // console.log(`[MATCH_CARD] Tiebreak score updated for player ${player}:`, score, this.match);
+
+// Checks conditions and shows/hides the tiebreak UI
+_checkAndToggleTiebreakUI() {
+  // 単セット形式（6G1set 等）のタイブレーク表示判定
+  if (this.tiebreakDivA && this.tiebreakInputA) {
+    const format = this.match.gameFormat;
+    const a = Number(this.match.scoreA);
+    const b = Number(this.match.scoreB);
+    const shouldShowSingle = (format === '6game1set' || format === '4game1set') && ((a === 7 && b === 6) || (a === 6 && b === 7));
+    this.tiebreakDivA.style.display = shouldShowSingle ? 'flex' : 'none';
+    if (this.tiebreakDivB) this.tiebreakDivB.style.display = 'none'; // B 側は常に非表示
   }
 
-  // Checks conditions and shows/hides the tiebreak UI
-  _checkAndToggleTiebreakUI() {
-    console.log('[DEBUG] Checking Tiebreak UI. Format:', this.match.gameFormat, 'Score A:', this.match.scoreA, 'Score B:', this.match.scoreB); // <--- Debug log added
+  // BO3 形式（4G/6G 2set・3set）の各セットごとのタイブレーク表示判定
+  if (Array.isArray(this.setTiebreakElemsA) && this.match.setScores) {
+    const { A: setA = [], B: setB = [] } = this.match.setScores;
+    this.setTiebreakElemsA.forEach((elems, idx) => {
+      if (!elems) return;
+      const sA = Number(setA[idx]);
+      const sB = Number(setB[idx]);
+      const show = (sA === 7 && sB === 6) || (sA === 6 && sB === 7) || (sA === 5 && sB === 4) || (sA === 4 && sB === 5); // 4Gでは5-4/4-5
+      elems.forEach(el => {
+        el.style.display = show ? '' : 'none';
+      });
+    });
+  }
+}
 
-    if (!this.tiebreakDivA || !this.tiebreakInputA || !this.tiebreakDivB || !this.tiebreakInputB) {
-      // Tiebreak elements might not exist if card creation failed or for different match types
-      console.warn('[MATCH_CARD] Tiebreak UI elements not found for match ID:', this.match.id);
-      return;
-    }
 
-    const format = this.match.gameFormat;
-    // スコアは入力要素の value 経由で文字列として保持されていることがあるため、確実に数値へ変換する
-    let scoreA = parseInt(this.match.scoreA, 10);
-    let scoreB = parseInt(this.match.scoreB, 10);
+
+/* DUPLICATE LEGACY BLOCK START
+const a = Number(this.match.scoreA);
+const b = Number(this.match.scoreB);
+const shouldShow = (format === '6game1set' || format === '4game1set') && ((a === 7 && b === 6) || (a === 6 && b === 7));
+this.tiebreakDivA.style.display = shouldShow ? 'flex' : 'none';
+
+
+if (Array.isArray(this.setTiebreakElemsA) && this.match.setScores) {
+const setScores = this.match.setScores;
+for (let i = 0; i < this.setTiebreakElemsA.length; i++) {
+const elems = this.setTiebreakElemsA[i];
+if (!elems) continue;
+const sA = Number(setScores.A?.[i]);
+const sB = Number(setScores.B?.[i]);
+const showTB = (sA === 7 && sB === 6) || (sA === 6 && sB === 7);
+elems.forEach(el => {
+el.style.display = showTB ? '' : 'none';
+});
+}
+}
     if (isNaN(scoreA)) scoreA = -1;
     if (isNaN(scoreB)) scoreB = -1;
     let showTiebreak = false;
@@ -658,13 +766,38 @@ class MatchCard {
       showTiebreak = true;
     }
     // 8game1set format
+    else if (format === '4game2set' || format === '4game3set') {
+      const setScores = this.getSetScores();
+      const maxSet = format === '4game2set' ? 2 : 3;
+      for (let i = 0; i < maxSet; i++) {
+        const a = parseInt(setScores.A[i], 10);
+        const b = parseInt(setScores.B[i], 10);
+        if ((a === 5 && b === 4) || (a === 4 && b === 5)) {
+          showTiebreak = true;
+          break;
+        }
+      }
+    }
+    else if (format === '6game2set' || format === '6game3set') {
+      const setScores = this.getSetScores();
+      for (let i = 0; i < 2; i++) {
+        const a = parseInt(setScores.A[i], 10);
+        const b = parseInt(setScores.B[i], 10);
+        if ((a === 7 && b === 6) || (a === 6 && b === 7)) {
+          showTiebreak = true;
+          break;
+        }
+      }
+    }
+    // 8game1set format
     else if (format === '8game1set' && 
              ((scoreA === 9 && scoreB === 8) || (scoreA === 8 && scoreB === 9))) {
       showTiebreak = true;
     }
     // Add more conditions if other formats also have tiebreaks under specific scores
 
-    if (showTiebreak) {
+    /* --- 以下の旧ロジックは統合済みのため削除 --- */
+    // (removed)
       // プレイヤーA側のみタイブレーク入力欄を表示し、B側は常に非表示にする（ユーザー要望）
       this.tiebreakDivA.style.display = 'inline-block';
       this.tiebreakInputA.value = this.match.tieBreakA !== null ? this.match.tieBreakA : '';
@@ -672,18 +805,11 @@ class MatchCard {
     } else {
       this.tiebreakDivA.style.display = 'none'; // タイブレーク入力欄を非表示
       this.tiebreakDivB.style.display = 'none'; // プレイヤーBのタイブレーク入力欄を非表示
+DUPLICATE LEGACY BLOCK END */
       // オプション: メインスコアがタイブレークの条件を満たさなくなった場合、タイブレークスコアをクリアすることも検討
       // if (this.match.tieBreakA !== null) {
       //   this.match.tieBreakA = null;
       //   this.updateMatchData({ tieBreakA: null });
-      // }
-      // if (this.match.tieBreakB !== null) {
-      //   this.match.tieBreakB = null;
-      //   this.updateMatchData({ tieBreakB: null });
-      // }
-    }
-  }
-
 // 動的要素を更新するメソッド - スコア入力時に呼び出される
 updateDynamicElements() {
   // スコアに基づいて動的に変更が必要な要素を更新
@@ -822,6 +948,42 @@ async checkLeagueWinCondition() {
     showDebug('[DEBUG] format: ' + format);
     showDebug('[DEBUG] scoreA: ' + scoreA + ', scoreB: ' + scoreB);
     
+    // BO3形式（4G2set, 6G2set, 4G3set, 6G3set）の勝者判定
+    if (['4game2set', '6game2set', '4game3set', '6game3set'].includes(format)) {
+      // 合計セット勝利数を最新化
+      this.calculateTotalScore();
+      const winsA = Number.isFinite(Number(this.match.scoreA)) ? Number(this.match.scoreA) : 0;
+      const winsB = Number.isFinite(Number(this.match.scoreB)) ? Number(this.match.scoreB) : 0;
+      showDebug(`[DEBUG] BO3判定 winsA=${winsA} winsB=${winsB}`);
+
+      if (winsA >= 2 || winsB >= 2) {
+        newWinner = winsA > winsB ? 'A' : 'B';
+        newStatus = 'Win';
+      } else {
+        newWinner = null;
+        newStatus = 'Pending';
+      }
+
+      if (this.match.winner !== newWinner || this.match.status !== newStatus) {
+        if (newWinner && !this.match.actualEndTime) {
+          this.match.actualEndTime = new Date().toISOString();
+        } else if (!newWinner) {
+          this.match.actualEndTime = null;
+        }
+
+        this.match.winner = newWinner;
+        this.match.status = newStatus;
+        this.updateWinStatus();
+        this.updateEndTimeDisplay();
+
+        if (window.db && typeof window.db.updateMatch === 'function') {
+          window.db.updateMatch({ id: this.match.id, winner: newWinner, status: newStatus, actualEndTime: this.match.actualEndTime });
+        }
+      }
+
+      return; // BO3形式の判定終了
+    }
+
     // 6G1set形式の勝者判定
     if (format.includes('6g') || format.includes('6game')) {
       showDebug('[DEBUG] 6G1set判定: scoreA=' + scoreA + ' scoreB=' + scoreB);
@@ -861,6 +1023,13 @@ async checkLeagueWinCondition() {
       // 勝者・ステータス変更があれば直接this.matchに代入しUI更新
       if (this.match.winner !== newWinner || this.match.status !== newStatus) {
         showDebug('[DEBUG] 勝者変更: ' + this.match.winner + ' → ' + newWinner);
+        // actualEndTime の自動設定 / 解除
+        if (newWinner && !this.match.actualEndTime) {
+          this.match.actualEndTime = new Date().toISOString();
+        } else if (!newWinner) {
+          this.match.actualEndTime = null;
+        }
+
         this.match.winner = newWinner;
         this.match.status = newStatus;
         this.updateWinStatus();
@@ -869,13 +1038,357 @@ async checkLeagueWinCondition() {
         // データベースに保存
         const db = window.db;
         if (db) {
-          db.updateMatch(this.match.id, { winner: newWinner, status: newStatus });
+          db.updateMatch({ id: this.match.id, winner: newWinner, status: newStatus, actualEndTime: this.match.actualEndTime });
         }
       }
       
       return; // 6G1set判定後は処理終了
     }
+
+    // 8G1set形式の勝者判定
+    if (format.includes('8g') || format.includes('8game')) {
+      showDebug('[DEBUG] 8G1set判定: scoreA=' + scoreA + ' scoreB=' + scoreB);
+      if (scoreAEntered && scoreBEntered) {
+        showDebug('[DEBUG] 両方のスコアが入力済み');
+        // 8ゲームに到達した方が勝利（差は問わない）
+        if (scoreA >= 8 || scoreB >= 8) {
+          if (scoreA > scoreB) {
+            newWinner = 'A';
+            newStatus = 'Win';
+          } else if (scoreB > scoreA) {
+            newWinner = 'B';
+            newStatus = 'Win';
+          }
+        }
+      } else {
+        // 片方のスコアしか入力されていない場合は勝者をクリア
+        newWinner = null;
+        newStatus = 'Pending';
+      }
+
+      // 勝者・ステータス変更があれば更新
+      if (this.match.winner !== newWinner || this.match.status !== newStatus) {
+        // actualEndTime の自動設定 / 解除
+        if (newWinner && !this.match.actualEndTime) {
+          this.match.actualEndTime = new Date().toISOString();
+        } else if (!newWinner) {
+          this.match.actualEndTime = null;
+        }
+
+        this.match.winner = newWinner;
+        this.match.status = newStatus;
+        this.updateWinStatus();
+        this.updateEndTimeDisplay();
+        
+        // データベースに保存
+        const db = window.db;
+        if (db) {
+          db.updateMatch({ id: this.match.id, winner: newWinner, status: newStatus, actualEndTime: this.match.actualEndTime });
+        }
+      }
+      return; // 8G1set判定後は処理終了
+    }
+
+    // 4G1set形式の勝者判定（先に4ゲーム取った方が勝ち）
+    if ((format === '4game1set') || (format === '4g1set') || (format === '4game' && !format.includes('2set') && !format.includes('3set'))) {
+      showDebug('[DEBUG] 4G1set判定: scoreA=' + scoreA + ' scoreB=' + scoreB);
+      if (scoreAEntered && scoreBEntered) {
+        if (scoreA >= 4 || scoreB >= 4) {
+          if (scoreA > scoreB) {
+            newWinner = 'A';
+            newStatus = 'Win';
+          } else if (scoreB > scoreA) {
+            newWinner = 'B';
+            newStatus = 'Win';
+          }
+        }
+      } else {
+        newWinner = null;
+        newStatus = 'Pending';
+      }
+
+      if (this.match.winner !== newWinner || this.match.status !== newStatus) {
+        if (newWinner && !this.match.actualEndTime) {
+          this.match.actualEndTime = new Date().toISOString();
+        } else if (!newWinner) {
+          this.match.actualEndTime = null;
+        }
+        this.match.winner = newWinner;
+        this.match.status = newStatus;
+        this.updateWinStatus();
+        this.updateEndTimeDisplay();
+        const db = window.db;
+        if (db) {
+          db.updateMatch({ id: this.match.id, winner: newWinner, status: newStatus, actualEndTime: this.match.actualEndTime });
+        }
+      }
+      return; // 4G1set処理終了
+    }
+
+    // 5G1set形式の勝者判定（合計5ゲームで勝敗）
+    if (format.includes('5g') || format.includes('5game')) {
+      showDebug('[DEBUG] 5G1set判定: scoreA=' + scoreA + ' scoreB=' + scoreB);
+      if (scoreAEntered && scoreBEntered) {
+        if ((scoreA + scoreB) >= 5) {
+          if (scoreA > scoreB) {
+            newWinner = 'A';
+            newStatus = 'Win';
+          } else if (scoreB > scoreA) {
+            newWinner = 'B';
+            newStatus = 'Win';
+          }
+        }
+      } else {
+        newWinner = null;
+        newStatus = 'Pending';
+      }
+
+      if (this.match.winner !== newWinner || this.match.status !== newStatus) {
+        if (newWinner && !this.match.actualEndTime) {
+          this.match.actualEndTime = new Date().toISOString();
+        } else if (!newWinner) {
+          this.match.actualEndTime = null;
+        }
+
+        this.match.winner = newWinner;
+        this.match.status = newStatus;
+        this.updateWinStatus();
+        this.updateEndTimeDisplay();
+        
+        const db = window.db;
+        if (db) {
+          db.updateMatch({ id: this.match.id, winner: newWinner, status: newStatus, actualEndTime: this.match.actualEndTime });
+        }
+      }
+      return; // 5G1set処理終了
+    }
     
+    // 6G2set+10MTB 形式の勝者判定（2セット先取。3セット目は10ポイント・2点差のマッチタイブレーク）
+    if (format.includes('6g2set') || format.includes('6game2set')) {
+      const setScores = this.getSetScores();
+      let winsA = 0;
+      let winsB = 0;
+      const isNumeric = (v) => v !== null && v !== '' && !isNaN(parseInt(v, 10));
+
+      for (let i = 0; i < 3; i++) {
+        const rawA = setScores.A[i];
+        const rawB = setScores.B[i];
+        if (!isNumeric(rawA) || !isNumeric(rawB)) continue;
+        const sA = parseInt(rawA, 10);
+        const sB = parseInt(rawB, 10);
+
+        if (i === 2) { // スーパータイブレーク
+          if ((sA >= 10 || sB >= 10) && Math.abs(sA - sB) >= 2) {
+            if (sA > sB) winsA++; else winsB++;
+          }
+        } else { // 通常セット 6ゲーム制
+          if ((sA >= 6 || sB >= 6)) {
+            const diff = Math.abs(sA - sB);
+            if (diff >= 2) { // 6-0～6-4, 7-5 など
+              if (sA > sB) winsA++; else winsB++;
+            } else if ((sA === 7 || sB === 7)) { // 7-5 または 7-6（タイブレーク）
+              if (sA > sB) winsA++; else winsB++;
+            }
+          }
+        }
+      }
+
+      if (winsA >= 2) {
+        newWinner = 'A';
+        newStatus = 'Win';
+      } else if (winsB >= 2) {
+        newWinner = 'B';
+        newStatus = 'Win';
+      } else {
+        newWinner = null;
+        newStatus = 'Pending';
+      }
+
+      if (this.match.winner !== newWinner || this.match.status !== newStatus) {
+        if (newWinner && !this.match.actualEndTime) {
+          this.match.actualEndTime = new Date().toISOString();
+        } else if (!newWinner) {
+          this.match.actualEndTime = null;
+        }
+        this.match.winner = newWinner;
+        this.match.status = newStatus;
+        this.updateWinStatus();
+        this.updateEndTimeDisplay();
+        const db = window.db;
+        if (db) {
+          db.updateMatch({ id: this.match.id, winner: newWinner, status: newStatus, actualEndTime: this.match.actualEndTime });
+        }
+      }
+      return; // 6G2set+10MTB 処理終了
+    }
+
+    // 6G3set（BO3 フルセット） 形式の勝者判定
+    if (format.includes('6g3set') || format.includes('6game3set')) {
+      const setScores = this.getSetScores();
+      let winsA = 0;
+      let winsB = 0;
+      const isNumeric = (v) => v !== null && v !== '' && !isNaN(parseInt(v, 10));
+
+      for (let i = 0; i < 3; i++) {
+        const rawA = setScores.A[i];
+        const rawB = setScores.B[i];
+        if (!isNumeric(rawA) || !isNumeric(rawB)) continue;
+        const sA = parseInt(rawA, 10);
+        const sB = parseInt(rawB, 10);
+
+        if ((sA >= 6 || sB >= 6)) {
+          const diff = Math.abs(sA - sB);
+          if (diff >= 2) { // 6-0～6-4, 7-5
+            if (sA > sB) winsA++; else winsB++;
+          } else if ((sA === 7 || sB === 7)) { // 7-6 タイブレーク勝利
+            if (sA > sB) winsA++; else winsB++;
+          }
+        }
+      }
+
+      if (winsA >= 2) {
+        newWinner = 'A';
+        newStatus = 'Win';
+      } else if (winsB >= 2) {
+        newWinner = 'B';
+        newStatus = 'Win';
+      } else {
+        newWinner = null;
+        newStatus = 'Pending';
+      }
+
+      if (this.match.winner !== newWinner || this.match.status !== newStatus) {
+        if (newWinner && !this.match.actualEndTime) {
+          this.match.actualEndTime = new Date().toISOString();
+        } else if (!newWinner) {
+          this.match.actualEndTime = null;
+        }
+        this.match.winner = newWinner;
+        this.match.status = newStatus;
+        this.updateWinStatus();
+        this.updateEndTimeDisplay();
+        const db = window.db;
+        if (db) {
+          db.updateMatch({ id: this.match.id, winner: newWinner, status: newStatus, actualEndTime: this.match.actualEndTime });
+        }
+      }
+      return; // 6G3set 処理終了
+    }
+
+    // 4G3set 形式の勝者判定
+    if (format.includes('4g3set') || format.includes('4game3set')) {
+      const setScores = this.getSetScores();
+      let winsA = 0;
+      let winsB = 0;
+      const isNumeric = (v) => v !== null && v !== '' && !isNaN(parseInt(v, 10));
+
+      for (let i = 0; i < 3; i++) {
+        const rawA = setScores.A[i];
+        const rawB = setScores.B[i];
+        if (!isNumeric(rawA) || !isNumeric(rawB)) continue;
+        const sA = parseInt(rawA, 10);
+        const sB = parseInt(rawB, 10);
+
+        if ((sA >= 4 || sB >= 4)) {
+          const diff = Math.abs(sA - sB);
+          if (diff >= 2) { // 4-0～4-2, 5-3
+            if (sA > sB) winsA++; else winsB++;
+          } else if ((sA === 5 || sB === 5)) { // 5-4 タイブレーク勝利
+            if (sA > sB) winsA++; else winsB++;
+          }
+        }
+      }
+
+      if (winsA >= 2) {
+        newWinner = 'A';
+        newStatus = 'Win';
+      } else if (winsB >= 2) {
+        newWinner = 'B';
+        newStatus = 'Win';
+      } else {
+        newWinner = null;
+        newStatus = 'Pending';
+      }
+
+      if (this.match.winner !== newWinner || this.match.status !== newStatus) {
+        if (newWinner && !this.match.actualEndTime) {
+          this.match.actualEndTime = new Date().toISOString();
+        } else if (!newWinner) {
+          this.match.actualEndTime = null;
+        }
+        this.match.winner = newWinner;
+        this.match.status = newStatus;
+        this.updateWinStatus();
+        this.updateEndTimeDisplay();
+        const db = window.db;
+        if (db) {
+          db.updateMatch({ id: this.match.id, winner: newWinner, status: newStatus, actualEndTime: this.match.actualEndTime });
+        }
+      }
+      return; // 4G3set 処理終了
+    }
+    
+    
+    // 4G2set+10MTB 形式の勝者判定（2セット先取。3セット目は10ポイント・2点差のマッチタイブレーク）
+    if (format.includes('4g2set') || format.includes('4game2set')) {
+      const setScores = this.getSetScores(); // { A: [...], B: [...] }
+      let winsA = 0;
+      let winsB = 0;
+      // 判定用ヘルパー
+      const isNumeric = (v) => v !== null && v !== '' && !isNaN(parseInt(v, 10));
+
+      for (let i = 0; i < 3; i++) {
+        const rawA = setScores.A[i];
+        const rawB = setScores.B[i];
+        if (!isNumeric(rawA) || !isNumeric(rawB)) continue; // スコア未入力のセットはスキップ
+        const sA = parseInt(rawA, 10);
+        const sB = parseInt(rawB, 10);
+
+        if (i === 2) { // 3セット目 = マッチタイブレーク（10ポイント制）
+          if ((sA >= 10 || sB >= 10) && Math.abs(sA - sB) >= 2) {
+            if (sA > sB) winsA++; else winsB++;
+          }
+        } else { // 1・2セット目 = 4ゲーム先取（5-4 タイブレークあり）
+          if ((sA >= 4 || sB >= 4)) {
+            const diff = Math.abs(sA - sB);
+            if (diff >= 2) { // 4-0,4-1,4-2,5-3 など
+              if (sA > sB) winsA++; else winsB++;
+            } else if (sA === 5 || sB === 5) { // 5-4 のタイブレーク勝利
+              if (sA > sB) winsA++; else winsB++;
+            }
+          }
+        }
+      }
+
+      if (winsA >= 2) {
+        newWinner = 'A';
+        newStatus = 'Win';
+      } else if (winsB >= 2) {
+        newWinner = 'B';
+        newStatus = 'Win';
+      } else {
+        newWinner = null;
+        newStatus = 'Pending';
+      }
+
+      if (this.match.winner !== newWinner || this.match.status !== newStatus) {
+        if (newWinner && !this.match.actualEndTime) {
+          this.match.actualEndTime = new Date().toISOString();
+        } else if (!newWinner) {
+          this.match.actualEndTime = null;
+        }
+        this.match.winner = newWinner;
+        this.match.status = newStatus;
+        this.updateWinStatus();
+        this.updateEndTimeDisplay();
+        const db = window.db;
+        if (db) {
+          db.updateMatch({ id: this.match.id, winner: newWinner, status: newStatus, actualEndTime: this.match.actualEndTime });
+        }
+      }
+      return; // 4G2set+10MTB 処理終了
+    }
+
     // その他の形式（元のコード）
     if (this.match.gameFormat === 'league') {
     const scoreA = parseInt(this.match.scoreA, 10) || 0;
@@ -1025,6 +1538,9 @@ update(newMatchData) {
     B: this._parseScores(this.match.scoreB, numSetsUpdate)
   };
 
+  // setScores 更新後に必ず合計セット数を再計算
+  this.calculateTotalScore();
+
   this.updateScoreInputsInteractivity();
   this.updateWinStatus();
   this.updateEndTimeDisplay();
@@ -1140,6 +1656,19 @@ update(newMatchData) {
       }
     }
     
+    // 4G2set+10MTB / 6G2set+10MTB のスーパータイブレークを判定
+    if (['4game2set','6game2set'].includes(gameFormat)) {
+      const tbA = Number(this.match.tieBreakA || 0);
+      const tbB = Number(this.match.tieBreakB || 0);
+      if ((tbA >= 10 || tbB >= 10) && Math.abs(tbA - tbB) >= 2) {
+        if (tbA > tbB) {
+          winsA++;
+        } else if (tbB > tbA) {
+          winsB++;
+        }
+      }
+    }
+
     console.log('[MATCH_CARD] calculateTotalScore - winsA:', winsA, 'winsB:', winsB);
     
     // 合計スコアを更新
@@ -1216,8 +1745,9 @@ update(newMatchData) {
   getSetScores() {
     const setScores = { A: [], B: [] };
     if (this.element) {
-      const setInputsA = this.element.querySelectorAll('input[data-set-player="A"]');
-      const setInputsB = this.element.querySelectorAll('input[data-set-player="B"]');
+      // セットスコア入力欄は data-player と data-set 属性を持つ
+      const setInputsA = this.element.querySelectorAll('input.set-score-input[data-player="A"]');
+      const setInputsB = this.element.querySelectorAll('input.set-score-input[data-player="B"]');
       
       setInputsA.forEach((input, index) => {
         setScores.A[index] = input.value || null;

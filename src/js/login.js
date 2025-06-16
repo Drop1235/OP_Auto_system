@@ -3,6 +3,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const passwordInput = document.getElementById('password');
   const errorMessage = document.getElementById('error-message');
   
+  // ページロード直後にパスワード入力欄へフォーカスを当てる
+  passwordInput.focus();
+  
   // 初期パスワード - 実際の運用では適切に変更してください
   const initialPassword = 'tennis2025';
   

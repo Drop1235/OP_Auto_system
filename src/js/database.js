@@ -254,8 +254,18 @@ class TennisMatchDatabase {
   }
 }
 
-// Create and export database instance
-const db = new TennisMatchDatabase();
+// Choose backend: Firestore if firebase loaded, else localStorage
+let db;
+if (window.firebase && window.firestore && window.FirestoreMatchDatabase) {
+  db = new window.FirestoreMatchDatabase();
+  db.initDatabase();
+  console.log('Using Firestore backend');
+} else {
+  db = new TennisMatchDatabase();
+  console.log('Using localStorage backend');
+}
+
+// Export database instance
 
 // グローバル変数としてdbを設定
 window.db = db;
