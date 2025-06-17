@@ -351,18 +351,8 @@ document.addEventListener('DOMContentLoaded', () => {
             playerAInput.focus();
             console.log('[APP] Focus set to player A input');
           }
-          const playerBInput = document.getElementById('player-b');
-          if (playerBInput) {
-            playerBInput.disabled = false;
-            playerBInput.readOnly = false;
-            playerBInput.focus();
-          }
         }, 100);
-      } else {
-        console.error('[APP] Add match modal not found');
-        alert('モーダルが見つかりません');
       }
-      
       return false; // イベントの伝播を停止
     };
     

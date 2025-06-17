@@ -11,7 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
     logoutButton.addEventListener('click', () => {
       if (confirm('本当にログアウトしますか？')) {
         localStorage.removeItem('isAuthenticated');
-        window.location.href = 'login.html';
+        // ページをリロードし、認証チェックにより自動でログイン画面へ遷移
+        window.location.reload();
       }
     });
   }

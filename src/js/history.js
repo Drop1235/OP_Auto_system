@@ -238,13 +238,12 @@ class History {
     scoreWinContainerA.style.display = 'flex';
     scoreWinContainerA.style.alignItems = 'center';
     scoreWinContainerA.style.gap = '5px';
-    scoreWinContainerA.style.width = '150px'; // 幅をさらに広げてセットスコアとチェックマークが収まるように
+    scoreWinContainerA.style.marginLeft = 'auto';
     
     // スコア表示用コンテナ
     const scoreContainerA = document.createElement('div');
     scoreContainerA.className = 'set-scores-container';
     scoreContainerA.style.display = 'flex';
-    scoreContainerA.style.justifyContent = 'flex-end';
     
     // スコア表示
     if (match.gameFormat === '6game3set' || match.gameFormat === '4game3set' || 
@@ -292,15 +291,7 @@ class History {
       scoreContainerA.appendChild(scoreA);
     }
     
-    // タイブレークスコア表示
-    if (match.tieBreakA) {
-      const tiebreakA = document.createElement('input');
-      tiebreakA.className = 'tiebreak-input';
-      tiebreakA.value = match.tieBreakA;
-      tiebreakA.readOnly = true;
-      tiebreakA.style.width = '30px';
-      scoreContainerA.appendChild(tiebreakA);
-    }
+
     
     scoreWinContainerA.appendChild(scoreContainerA);
     
@@ -314,7 +305,7 @@ class History {
       winALabel.style.fontSize = '1.2em';
       winALabel.style.marginLeft = '5px';
       winALabel.style.marginRight = '5px';
-      scoreWinContainerA.appendChild(winALabel);
+      scoreWinContainerA.prepend(winALabel);
     }
     
     playerInfoA.appendChild(scoreWinContainerA);
@@ -348,7 +339,7 @@ class History {
     scoreWinContainerB.style.display = 'flex';
     scoreWinContainerB.style.alignItems = 'center';
     scoreWinContainerB.style.gap = '5px';
-    scoreWinContainerB.style.width = '150px'; // 幅をさらに広げてセットスコアとチェックマークが収まるように
+    scoreWinContainerB.style.marginLeft = 'auto';
     
     // スコア表示用コンテナ
     const scoreContainerB = document.createElement('div');
@@ -402,17 +393,11 @@ class History {
       scoreContainerB.appendChild(scoreB);
     }
     
-    // タイブレークスコア表示
-    if (match.tieBreakB) {
-      const tiebreakB = document.createElement('input');
-      tiebreakB.className = 'tiebreak-input';
-      tiebreakB.value = match.tieBreakB;
-      tiebreakB.readOnly = true;
-      tiebreakB.style.width = '30px';
-      scoreContainerB.appendChild(tiebreakB);
-    }
+
     
-    scoreWinContainerB.appendChild(scoreContainerB);
+    scoreWinContainerB.style.justifyContent = 'flex-end';
+scoreWinContainerB.style.flexDirection = 'row-reverse';
+scoreWinContainerB.appendChild(scoreContainerB);
     
     // Winラベル
     if (match.winner === 'B') {
@@ -424,7 +409,7 @@ class History {
       winBLabel.style.fontSize = '1.2em';
       winBLabel.style.marginLeft = '5px';
       winBLabel.style.marginRight = '5px';
-      scoreWinContainerB.appendChild(winBLabel);
+      scoreWinContainerB.prepend(winBLabel);
     }
     
     playerInfoB.appendChild(scoreWinContainerB);
@@ -432,6 +417,42 @@ class History {
     
     playersContainer.appendChild(playerBDiv);
     card.appendChild(playersContainer);
+
+    // ----- Tiebreak Row (Bottom) -----
+    const tiebreakRow = document.createElement('div');
+    tiebreakRow.className = 'tiebreak-row';
+    tiebreakRow.style.display = 'flex';
+    tiebreakRow.style.justifyContent = 'flex-end';
+    tiebreakRow.style.gap = '5px';
+    tiebreakRow.style.marginTop = '4px';
+    tiebreakRow.style.marginRight = '0';
+
+    // Helper to add TB input
+    const addTbInput = (value) => {
+      const tbInput = document.createElement('input');
+      tbInput.className = 'tiebreak-input';
+      tbInput.readOnly = true;
+      tbInput.style.width = '30px';
+      tbInput.style.textAlign = 'center';
+      tbInput.value = value || '';
+      tiebreakRow.appendChild(tbInput);
+    };
+
+    if (match.tieBreakA) {
+      const tbValues = Array.isArray(match.tieBreakA)
+        ? match.tieBreakA
+        : String(match.tieBreakA).split(',').map(v => v.trim());
+      tbValues.forEach(v => {
+        if (v !== '' && v !== '0') {
+          addTbInput(v);
+        }
+      });
+    }
+
+    // Append row only if it has children (i.e., TB was present)
+    if (tiebreakRow.children.length > 0) {
+      card.appendChild(tiebreakRow);
+    }
     
     // 下部の終了時間表示は不要 (上部にあるため)
     
