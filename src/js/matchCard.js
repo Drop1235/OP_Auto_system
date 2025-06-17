@@ -214,10 +214,11 @@ class MatchCard {
     playerADiv.appendChild(playerAInput);
     
     // スコア入力A
+    let scoreContainerA; // プレイヤーAのスコア用ラッパーを先に宣言
     if (this.match.gameFormat === '6game3set' || this.match.gameFormat === '4game3set' || 
         this.match.gameFormat === '4game2set' || this.match.gameFormat === '6game2set') {
       // BO3形式の場合は3セット分のスコア入力欄を表示
-      const scoreContainerA = document.createElement('div');
+      scoreContainerA = document.createElement('div');
       scoreContainerA.style.display = 'flex';
       scoreContainerA.style.flexDirection = 'column';
       scoreContainerA.style.alignItems = 'center';
@@ -305,19 +306,19 @@ class MatchCard {
       tiebreakInputA.addEventListener('click',(e)=>e.stopPropagation());
 
       // scoreContainerAへ追加
-      scoreContainerA.appendChild(setScoresContainerA);
-      scoreContainerA.appendChild(tiebreakDivA);
+      // duplicate removed
+      
 
       // 廃止: per-set TB に置き換え
 
-      playerADiv.appendChild(scoreContainerA);
+      // scoreContainerA は後で scoreWinContainerA にまとめて追加
       
       // 合計スコア表示用の要素
       const totalScoreA = document.createElement('div');
       totalScoreA.className = 'total-score';
       totalScoreA.textContent = this.match.scoreA || '0';
       totalScoreA.dataset.player = 'A';
-      playerADiv.appendChild(totalScoreA);
+      // totalScoreA は後で scoreWinContainerA にまとめて追加
     } else {
       // 通常のスコア入力欄
       const scoreAInput = document.createElement('input');
@@ -342,7 +343,7 @@ class MatchCard {
       });
       
       // スコア入力欄の上にタイブレーク入力欄を表示するコンテナ
-      const scoreContainerA = document.createElement('div');
+      scoreContainerA = document.createElement('div');
       scoreContainerA.style.display = 'flex';
       scoreContainerA.style.flexDirection = 'column';
       scoreContainerA.style.alignItems = 'center';
@@ -398,10 +399,11 @@ class MatchCard {
       scoreContainerA.appendChild(scoreAInput);
       scoreContainerA.appendChild(tiebreakDivA);
       
+      
       this.tiebreakDivA = tiebreakDivA;
       this.tiebreakInputA = tiebreakInputA;
       
-      playerADiv.appendChild(scoreContainerA);
+      // scoreContainerA は後で scoreWinContainerA にまとめて追加
     }
     
     // Win表示/ボタン（プレイヤーA）
@@ -418,6 +420,159 @@ class MatchCard {
       winADiv.classList.add('win-button');
     }
     
+    // 右寄せ用コンテナを生成して A 行に配置
+    const scoreWinContainerA = document.createElement('div');
+    scoreWinContainerA.style.display = 'flex';
+    scoreWinContainerA.style.alignItems = 'center';
+    scoreWinContainerA.style.gap = '4px';
+    scoreWinContainerA.style.marginLeft = 'auto';
+
+    scoreWinContainerA.appendChild(winADiv);
+    if (typeof totalScoreA !== 'undefined') scoreWinContainerA.appendChild(totalScoreA);
+    scoreWinContainerA.appendChild(scoreContainerA);
+    playerADiv.appendChild(scoreWinContainerA);
+
+    // --- A行を playersContainer に追加 ---
+    playersContainer.appendChild(playerADiv);
+
+    // ================================
+    // プレイヤーB行の生成
+    const playerBDiv = document.createElement('div');
+    playerBDiv.className = 'match-card-player';
+
+    const playerBInput = document.createElement('input');
+    playerBInput.type = 'text';
+    playerBInput.className = 'player-name-input';
+    playerBInput.dataset.player = 'B';
+    playerBInput.value = this.match.playerB;
+    playerBInput.addEventListener('change', (e) => {
+      this.updateMatchData({ playerB: e.target.value });
+    });
+    playerBDiv.appendChild(playerBInput);
+
+    // スコア入力B
+    let scoreContainerB;
+    if (this.match.gameFormat === '6game3set' || this.match.gameFormat === '4game3set' ||
+        this.match.gameFormat === '4game2set' || this.match.gameFormat === '6game2set') {
+      // BO3 形式
+      scoreContainerB = document.createElement('div');
+      scoreContainerB.style.display = 'flex';
+      scoreContainerB.style.flexDirection = 'column';
+      scoreContainerB.style.alignItems = 'center';
+      scoreContainerB.style.gap = '2px';
+
+      const setScoresContainerB = document.createElement('div');
+      setScoresContainerB.className = 'set-scores-container';
+
+      for (let i = 0; i < 3; i++) {
+        const setInput = document.createElement('input');
+        setInput.type = 'number';
+        setInput.min = '0';
+        setInput.max = '99';
+        setInput.className = 'set-score-input';
+        setInput.dataset.player = 'B';
+        setInput.dataset.set = i;
+        setInput.value = this.match.setScores?.B[i] || '';
+
+        setInput.addEventListener('change', (e) => {
+          if (!this.match.setScores) {
+            this.match.setScores = { A: [0,0,0], B: [0,0,0] };
+          }
+          this.match.setScores.B[i] = parseInt(e.target.value) || 0;
+          this.calculateTotalScore();
+          this.updateMatchData({
+            scoreA: this.match.scoreA,
+            scoreB: this.match.scoreB,
+            setScores: this.match.setScores
+          });
+          this.updateDynamicElements();
+          this.checkLeagueWinCondition();
+        });
+        setInput.addEventListener('click', (e) => e.stopPropagation());
+        setScoresContainerB.appendChild(setInput);
+      }
+
+      scoreContainerB.appendChild(setScoresContainerB);
+
+      // 合計スコア（セットカウント）はスコア入力欄の左側に配置するため、
+      // scoreWinContainerB へ後で追加
+      const totalScoreB = document.createElement('div');
+      totalScoreB.className = 'total-score';
+      totalScoreB.textContent = this.match.scoreB || '0';
+      totalScoreB.dataset.player = 'B';
+    } else {
+      // 単セット形式
+      const scoreBInput = document.createElement('input');
+      scoreBInput.type = 'number';
+      scoreBInput.min = '0';
+      scoreBInput.max = '99';
+      scoreBInput.className = 'score-input';
+      scoreBInput.dataset.player = 'B';
+      scoreBInput.value = (this.match.scoreB === null || this.match.scoreB === undefined) ? '' : this.match.scoreB;
+      this.scoreBInput = scoreBInput;
+
+      scoreBInput.addEventListener('change', (e) => {
+        this.match.scoreB = parseInt(e.target.value) || 0;
+        this.updateMatchData({ scoreB: this.match.scoreB });
+        this.updateDynamicElements();
+        this.checkLeagueWinCondition();
+      });
+      scoreBInput.addEventListener('click', (e) => e.stopPropagation());
+
+      scoreContainerB = document.createElement('div');
+      scoreContainerB.style.display = 'flex';
+      scoreContainerB.style.flexDirection = 'column';
+      scoreContainerB.style.alignItems = 'center';
+      scoreContainerB.style.gap = '2px';
+      scoreContainerB.appendChild(scoreBInput);
+
+      // B側タイブレーク入力欄（常時非表示、UI一貫性のため要素のみ保持）
+      const tiebreakDivB = document.createElement('div');
+      tiebreakDivB.className = 'tiebreak-score-container-b';
+      tiebreakDivB.style.display = 'none';
+      this.tiebreakDivB = tiebreakDivB;
+      scoreContainerB.appendChild(tiebreakDivB);
+    }
+
+    // WinラベルB
+    const winBDiv = document.createElement('div');
+    winBDiv.className = 'win-label';
+    winBDiv.dataset.player = 'B';
+    winBDiv.textContent = this.match.winner === 'B' ? '✔' : '●';
+    winBDiv.style.color = this.match.winner === 'B' ? 'red' : '';
+    if (this.match.winner !== 'B') winBDiv.classList.add('win-button');
+
+    const scoreWinContainerB = document.createElement('div');
+    scoreWinContainerB.style.display = 'flex';
+    scoreWinContainerB.style.alignItems = 'center';
+    scoreWinContainerB.style.gap = '4px';
+    scoreWinContainerB.style.marginLeft = 'auto';
+
+    scoreWinContainerB.appendChild(winBDiv);
+    // セットカウントをスコア入力欄の左側に配置
+    if (typeof totalScoreB !== 'undefined') scoreWinContainerB.appendChild(totalScoreB);
+    scoreWinContainerB.appendChild(scoreContainerB);
+    playerBDiv.appendChild(scoreWinContainerB);
+
+    winBDiv.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (this.match.winner === 'B') {
+        this.match.winner = null;
+        this.match.actualEndTime = null;
+      } else {
+        this.match.winner = 'B';
+        const now = new Date();
+        this.match.actualEndTime = now.toISOString();
+      }
+      this.updateMatchData({ winner: this.match.winner, actualEndTime: this.match.actualEndTime });
+      this.updateWinStatus();
+      this.updateEndTimeDisplay();
+    });
+
+    // playersContainer にB行を追加
+    playersContainer.appendChild(playerBDiv);
+
+
     // Winボタンのクリックイベントを追加
     winADiv.addEventListener('click', (e) => {
       e.stopPropagation(); // ダブルクリックイベントの伝播を防止
@@ -440,317 +595,53 @@ class MatchCard {
         winner: this.match.winner,
         actualEndTime: this.match.actualEndTime 
       });
-      
-      // UI更新
       this.updateWinStatus();
       this.updateEndTimeDisplay();
-    });
-    winADiv.dataset.player = 'A';
-    playerADiv.appendChild(winADiv);
-
-    // === タイブレーク行 ===
-    const tiebreakRow = document.createElement('div');
-    tiebreakRow.className = 'tiebreak-row';
-    tiebreakRow.style.display = 'flex'; // 常時表示行（個別ラッパーをトグル）
-    tiebreakRow.style.justifyContent = 'flex-end';
-    tiebreakRow.style.gap = '8px';
-    tiebreakRow.style.marginRight = '40px';
-
-    this.tiebreakWrappers = [];
-    this.tiebreakInputs = [];
-    // 3セット分のTB入力欄を横に並べる
-    for (let i = 0; i < 3; i++) {
-      const wrapper = document.createElement('span');
-      wrapper.style.display = 'none'; // 個別初期非表示
-      const open = document.createElement('span'); open.textContent='('; open.style.fontSize='0.8em';
-      const input = document.createElement('input');
-      input.type='number'; input.min='0'; input.max='99'; input.dataset.tiebreak='A'; input.dataset.set=i; input.style.width='30px'; input.style.fontSize='0.8em'; input.placeholder='TB';
-      const close = document.createElement('span'); close.textContent=')'; close.style.fontSize='0.8em';
-      wrapper.appendChild(open); wrapper.appendChild(input); wrapper.appendChild(close);
-      tiebreakRow.appendChild(wrapper);
-      this.tiebreakWrappers[i]=wrapper;
-      this.tiebreakInputs[i]=input;
-      input.addEventListener('change',(e)=>{
-        const v=e.target.value; const sc=v===''?null:parseInt(v,10);
-        if(!Array.isArray(this.match.tieBreakA)) this.match.tieBreakA=[null,null,null];
-        this.match.tieBreakA[i]=sc;
-        this.updateMatchData({ tieBreakA: this.match.tieBreakA });
-      });
-      input.addEventListener('click',e=>e.stopPropagation());
-    }
-
-    // TB行はカードの一番下に配置し、A・B行の下に来るようにする
-    this.tiebreakRow = tiebreakRow;
-
-    
-    // プレイヤーB
-    const playerBDiv = document.createElement('div');
-    playerBDiv.className = 'match-card-player';
-    // プレイヤー名
-    const playerBInput = document.createElement('input');
-    playerBInput.type = 'text';
-    playerBInput.className = 'player-name-input';
-    playerBInput.dataset.player = 'B'; // Add data-player attribute
-    playerBInput.value = this.match.playerB;
-    playerBInput.addEventListener('change', (e) => {
-      this.updateMatchData({ playerB: e.target.value });
-    });
-    playerBDiv.appendChild(playerBInput);
-    
-    // スコア入力B
-    if (this.match.gameFormat === '6game3set' || this.match.gameFormat === '4game3set' || 
-        this.match.gameFormat === '4game2set' || this.match.gameFormat === '6game2set') {
-      // BO3形式の場合は3セット分のスコア入力欄を表示
-      const scoreContainerB = document.createElement('div');
-      scoreContainerB.style.display = 'flex';
-      scoreContainerB.style.flexDirection = 'column';
-      scoreContainerB.style.alignItems = 'center';
-      scoreContainerB.style.gap = '2px';
-
-      const setScoresContainerB = document.createElement('div');
-      setScoresContainerB.className = 'set-scores-container';
+    }); // ← クリックハンドラをここで閉じる
       
-      // 3セット分のスコア入力欄を作成
+
+      // duplicate removed
+      
+
+      
+
+      
+      /* duplicate block removed
+      tiebreakRow.className = 'tiebreak-row';
+      tiebreakRow.style.display = 'flex'; // 常時表示行（個別ラッパーをトグル）
+      tiebreakRow.style.justifyContent = 'flex-end';
+      tiebreakRow.style.gap = '8px';
+      tiebreakRow.style.marginRight = '40px';
+
+      this.tiebreakWrappers = [];
+      this.tiebreakInputs = [];
+      // 3セット分のTB入力欄を横に並べる
       for (let i = 0; i < 3; i++) {
-        const setScoreInput = document.createElement('input');
-        setScoreInput.type = 'number';
-        setScoreInput.min = '0';
-        setScoreInput.max = '99';
-        setScoreInput.className = 'set-score-input';
-        setScoreInput.dataset.player = 'B';
-        setScoreInput.dataset.set = i;
-        setScoreInput.value = this.match.setScores?.B[i] || '';
-        
-        setScoreInput.addEventListener('change', (e) => {
-          // セットスコアを更新
-          if (!this.match.setScores) {
-            this.match.setScores = { A: [0, 0, 0], B: [0, 0, 0] };
-          }
-          this.match.setScores.B[i] = parseInt(e.target.value) || 0;
-          
-          // 全体のスコアを計算（勝ったセット数）
-          this.calculateTotalScore();
-          
-          // DB更新
-          this.updateMatchData({
-            scoreA: this.match.scoreA,
-            scoreB: this.match.scoreB,
-            setScores: this.match.setScores
-          });
-          
-          this.updateDynamicElements();
-          this.checkLeagueWinCondition();
-        });
-        
-        setScoreInput.addEventListener('click', (e) => {
-          e.stopPropagation();
-        });
-        
-        setScoresContainerB.appendChild(setScoreInput);
-      }
-
-      // --- タイブレーク入力欄（B） ユーザー要望で常時非表示にする ---
-      const tiebreakDivB = document.createElement('div');
-      tiebreakDivB.className = 'tiebreak-score-container-b';
-      tiebreakDivB.style.display = 'none';
-      const tiebreakInputB = document.createElement('input');
-      tiebreakInputB.type = 'number'; tiebreakInputB.min='0'; tiebreakInputB.max='99'; tiebreakInputB.className='tiebreak-score-input'; tiebreakInputB.dataset.tiebreak='B'; tiebreakInputB.style.width='30px'; tiebreakInputB.style.height='20px'; tiebreakInputB.style.fontSize='0.8em'; tiebreakInputB.style.padding='0 2px'; tiebreakInputB.placeholder='TB'; tiebreakInputB.value=this.match.tieBreakB||'';
-      tiebreakInputB.addEventListener('change',(e)=>{const v=e.target.value; const sc=v===''?null:parseInt(v,10); this.match.tieBreakB=sc; this.updateMatchData({tieBreakB:this.match.tieBreakB});});
-      tiebreakInputB.addEventListener('click',(e)=>e.stopPropagation());
-      const tbOpenParenB=document.createElement('span'); tbOpenParenB.textContent='('; tbOpenParenB.style.fontSize='0.8em';
-      const tbCloseParenB=document.createElement('span'); tbCloseParenB.textContent=')'; tbCloseParenB.style.fontSize='0.8em';
-      tiebreakDivB.appendChild(tbOpenParenB); tiebreakDivB.appendChild(tiebreakInputB); tiebreakDivB.appendChild(tbCloseParenB);
-
-      scoreContainerB.appendChild(setScoresContainerB);
-      scoreContainerB.appendChild(tiebreakDivB);
-
-      this.tiebreakDivB=tiebreakDivB; this.tiebreakInputB=tiebreakInputB;
-
-      playerBDiv.appendChild(scoreContainerB);
-      
-      // 合計スコア表示用の要素
-      const totalScoreB = document.createElement('div');
-      totalScoreB.className = 'total-score';
-      totalScoreB.textContent = this.match.scoreB || '0';
-      totalScoreB.dataset.player = 'B';
-      playerBDiv.appendChild(totalScoreB);
-
-    // --- ここでTB行は追加しない（下部でまとめて追加済み）
-    } else {
-      // 通常のスコア入力欄
-      const scoreBInput = document.createElement('input');
-      scoreBInput.type = 'number';
-      scoreBInput.min = '0';
-      scoreBInput.max = '99';
-      scoreBInput.className = 'score-input';
-      scoreBInput.dataset.player = 'B';
-      scoreBInput.value = (this.match.scoreB === null || this.match.scoreB === undefined) ? '' : this.match.scoreB;
-      this.scoreBInput = scoreBInput; // Assign to instance property
-      
-      scoreBInput.addEventListener('change', (e) => {
-        this.match.scoreB = parseInt(e.target.value) || 0;
-        this.updateMatchData({ scoreB: this.match.scoreB });
-        this.updateDynamicElements();
-        console.log('[DEBUG] scoreB changed:', this.match.scoreB, 'gameFormat:', this.match.gameFormat);
-        this.checkLeagueWinCondition();
-      });  
-      
-      scoreBInput.addEventListener('click', (e) => {
-        e.stopPropagation();
-      });
-      
-      // スコア入力欄の上にタイブレーク入力欄を表示するコンテナ
-      const scoreContainerB = document.createElement('div');
-      scoreContainerB.style.display = 'flex';
-      scoreContainerB.style.flexDirection = 'column';
-      scoreContainerB.style.alignItems = 'center';
-      scoreContainerB.style.gap = '2px';
-      
-      // タイブレーク入力欄のクローンを作成
-      const tiebreakDivB = document.createElement('div');
-      tiebreakDivB.className = 'tiebreak-score-container-b';
-      tiebreakDivB.style.display = 'none'; // 初期状態では非表示
-      tiebreakDivB.style.marginTop = '2px'; // スコア入力欄との間隔
-      
-      // タイブレークスコア入力フィールド
-      const tiebreakInputB = document.createElement('input');
-      tiebreakInputB.type = 'number';
-      tiebreakInputB.min = '0';
-      tiebreakInputB.max = '99';
-      tiebreakInputB.className = 'tiebreak-score-input';
-      tiebreakInputB.dataset.tiebreak = 'B'; // data-tiebreak属性を追加
-      tiebreakInputB.style.width = '30px'; // 幅を小さく
-      tiebreakInputB.style.height = '20px'; // 高さを小さく
-      tiebreakInputB.style.fontSize = '0.8em'; // フォントサイズを小さく
-      tiebreakInputB.style.padding = '0 2px'; // パディングを小さく
-      tiebreakInputB.placeholder = 'TB';
-      // 既存のタイブレークスコア値を設定
-      tiebreakInputB.value = this.match.tieBreakB || '';
-      
-      // カッコで囲む
-      const tbOpenParenB = document.createElement('span');
-      tbOpenParenB.textContent = '(';
-      tbOpenParenB.style.fontSize = '0.8em';
-      
-      const tbCloseParenB = document.createElement('span');
-      tbCloseParenB.textContent = ')';
-      tbCloseParenB.style.fontSize = '0.8em';
-      
-      tiebreakDivB.appendChild(tbOpenParenB);
-      tiebreakDivB.appendChild(tiebreakInputB);
-      tiebreakDivB.appendChild(tbCloseParenB);
-      
-      // タイブレーク入力のイベントリスナーを設定
-      tiebreakInputB.addEventListener('change', (e) => {
-        const value = e.target.value;
-        const score = value === '' ? null : parseInt(value, 10);
-        this.match.tieBreakB = score;
-        this.updateMatchData({ tieBreakB: this.match.tieBreakB });
-      });
-      
-      tiebreakInputB.addEventListener('click', (e) => {
-        e.stopPropagation();
-      });
-      
-      // スコア入力欄を先に追加し、その後にタイブレーク入力欄を追加
-      scoreContainerB.appendChild(scoreBInput);
-      scoreContainerB.appendChild(tiebreakDivB);
-      
-      this.tiebreakDivB = tiebreakDivB;
-      this.tiebreakInputB = tiebreakInputB;
-      
-      playerBDiv.appendChild(scoreContainerB);
-      
-      // --- 1set形式の場合もカードにTB行を追加 ---
-      // タイブレーク行がまだ作成されていない場合は作成
-      if (!this.tiebreakRow) {
-        const tiebreakRow = document.createElement('div');
-        tiebreakRow.className = 'tiebreak-row';
-        tiebreakRow.style.display = 'flex';
-        tiebreakRow.style.justifyContent = 'center';
-        tiebreakRow.style.gap = '8px';
-        
-        // 1set形式用のタイブレーク入力欄
         const wrapper = document.createElement('span');
-        wrapper.style.display = 'inline-block';
+        wrapper.style.display = 'none'; // 個別初期非表示
         const open = document.createElement('span'); open.textContent='('; open.style.fontSize='0.8em';
         const input = document.createElement('input');
-        input.type='number'; input.min='0'; input.max='99'; input.dataset.tiebreak='A'; input.style.width='30px'; input.style.fontSize='0.8em'; input.placeholder='TB';
-        input.value = this.match.tieBreakA || '';
+        input.type='number'; input.min='0'; input.max='99'; input.dataset.tiebreak='A'; input.dataset.set=i; input.style.width='30px'; input.style.fontSize='0.8em'; input.placeholder='TB';
         const close = document.createElement('span'); close.textContent=')'; close.style.fontSize='0.8em';
         wrapper.appendChild(open); wrapper.appendChild(input); wrapper.appendChild(close);
         tiebreakRow.appendChild(wrapper);
-        
-        // イベントリスナー設定
+        this.tiebreakWrappers[i]=wrapper;
+        this.tiebreakInputs[i]=input;
         input.addEventListener('change',(e)=>{
           const v=e.target.value; const sc=v===''?null:parseInt(v,10);
-          this.match.tieBreakA=sc;
+          if(!Array.isArray(this.match.tieBreakA)) this.match.tieBreakA=[null,null,null];
+          this.match.tieBreakA[i]=sc;
           this.updateMatchData({ tieBreakA: this.match.tieBreakA });
         });
         input.addEventListener('click',e=>e.stopPropagation());
-        
-        this.tiebreakRow = tiebreakRow;
       }
-      
-      // カードにTB行を追加
-      card.appendChild(this.tiebreakRow);
-    }
-    
-    // Win表示/ボタン（プレイヤーB）
-    const winBDiv = document.createElement('div');
-    winBDiv.className = 'win-label';
-    winBDiv.dataset.player = 'B';
-    
-    // 常にクリックイベントを追加するように修正
-    winBDiv.textContent = this.match.winner === 'B' ? '✔' : '●';
-    winBDiv.style.color = this.match.winner === 'B' ? 'red' : '';
-    if (this.match.winner === 'B') {
-      winBDiv.classList.remove('win-button');
-    } else {
-      winBDiv.classList.add('win-button');
-    }
-    
-    // Winボタンのクリックイベントを追加
-    winBDiv.addEventListener('click', (e) => {
-      e.stopPropagation(); // ダブルクリックイベントの伝播を防止
-      
-      // 現在の勝者をクリア
-      if (this.match.winner === 'B') {
-        this.match.winner = null;
-        // Win状態が解除されたときに終了時刻をクリア
-        this.match.actualEndTime = null;
-      } else {
-        // Bを勝者に設定
-        this.match.winner = 'B';
-        // Win状態になったときに現在時刻を自動設定
-        const now = new Date();
-        this.match.actualEndTime = now.toISOString();
-      }
-      
-      // DB更新
-      this.updateMatchData({ 
-        winner: this.match.winner,
-        actualEndTime: this.match.actualEndTime 
-      });
-      
-      // UI更新
-      this.updateWinStatus();
-      this.updateEndTimeDisplay();
-    });
-    winBDiv.dataset.player = 'B';
-    playerBDiv.appendChild(winBDiv);
-    
-    // プレイヤーAとプレイヤーBを追加
-    playersContainer.appendChild(playerADiv);
-    playersContainer.appendChild(playerBDiv);
-    
-    // タイブレーク入力欄のイベントリスナーはスコア入力欄の作成時に設定されるため、ここでは設定しない
+    duplicate block end */
 
   card.appendChild(headerDiv);
   card.appendChild(playersContainer); // playersContainer 内に TB 行も含まれるようになった
 
-  // TB行を playersContainer の下に追加（重複を防ぐ）
-  if (!playersContainer.contains(this.tiebreakRow)) {
+  // TB行を playersContainer の下に追加（存在する場合のみ）
+  if (this.tiebreakRow && !playersContainer.contains(this.tiebreakRow)) {
     playersContainer.appendChild(this.tiebreakRow);
   }
 
