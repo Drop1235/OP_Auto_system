@@ -237,6 +237,7 @@ class MatchCard {
         tRow.className = 'tiebreak-row';
         tRow.style.display = 'none';      // デフォルトは非表示、条件満たしたら表示
         tRow.style.justifyContent = 'flex-end';
+        tRow.style.marginLeft = 'auto';
         tRow.style.gap = '6px';
         tRow.style.marginTop = '4px';
         this.tiebreakRow = tRow;
@@ -305,7 +306,7 @@ class MatchCard {
       // --- タイブレーク入力欄（A） ---
       const tiebreakDivA = document.createElement('div');
       tiebreakDivA.className = 'tiebreak-score-container-a';
-      tiebreakDivA.style.display = 'none';
+      tiebreakDivA.style.display = 'inline-block';
       tiebreakDivA.style.marginTop = '2px';
 
       const tiebreakInputA = document.createElement('input');
@@ -375,7 +376,7 @@ class MatchCard {
       // タイブレーク入力欄のクローンを作成
       const tiebreakDivA = document.createElement('div');
       tiebreakDivA.className = 'tiebreak-score-container-a';
-      tiebreakDivA.style.display = 'none'; // 初期状態では非表示
+      tiebreakDivA.style.display = 'inline-block'; // ラッパー側で表示制御
       tiebreakDivA.style.marginTop = '2px'; // スコア入力欄との間隔
       
       // タイブレークスコア入力フィールド
@@ -418,13 +419,33 @@ class MatchCard {
         e.stopPropagation();
       });
       
-      // スコア入力欄を先に追加し、その後にタイブレーク入力欄を追加
+      // スコア入力欄のみ scoreContainerA に追加
       scoreContainerA.appendChild(scoreAInput);
-      scoreContainerA.appendChild(tiebreakDivA);
-      
-      
+
+      // ---- 1セット形式用タイブレーク行を作成 ----
+      const tiebreakRow = document.createElement('div');
+      tiebreakRow.className = 'tiebreak-row';
+      // 初期は非表示。_checkAndToggleTiebreakUI で条件を満たしたら "flex" に変更される
+      // 初期は非表示とし、表示条件を満たした際に _checkAndToggleTiebreakUI で "flex" に切り替える
+      tiebreakRow.style.display = 'none';
+      tiebreakRow.style.justifyContent = 'flex-end';
+      tiebreakRow.style.gap = '8px';
+      // 右端に寄せるために左側をautoにする
+      tiebreakRow.style.marginLeft = 'auto';
+
+      // 個別ラッパー（1セットなので1つのみ）
+      const wrapper = document.createElement('span');
+      wrapper.style.display = 'none'; // 初期非表示。トグル時に inline-block
+      wrapper.appendChild(tiebreakDivA);
+      tiebreakRow.appendChild(wrapper);
+
+      // MatchCard プロパティへ保持し、_checkAndToggleTiebreakUI が参照できるようにする
+      this.tiebreakRow = tiebreakRow;
+      this.tiebreakWrappers = [wrapper];
       this.tiebreakDivA = tiebreakDivA;
       this.tiebreakInputA = tiebreakInputA;
+
+      // playersContainer へは createCardElement の末尾でまとめて追加される
       
       // scoreContainerA は後で scoreWinContainerA にまとめて追加
     }
@@ -553,7 +574,7 @@ class MatchCard {
       // B側タイブレーク入力欄（常時非表示、UI一貫性のため要素のみ保持）
       const tiebreakDivB = document.createElement('div');
       tiebreakDivB.className = 'tiebreak-score-container-b';
-      tiebreakDivB.style.display = 'none';
+      tiebreakDivB.style.display = 'inline-block';
       this.tiebreakDivB = tiebreakDivB;
       scoreContainerB.appendChild(tiebreakDivB);
     }
@@ -642,7 +663,7 @@ class MatchCard {
       // 3セット分のTB入力欄を横に並べる
       for (let i = 0; i < 3; i++) {
         const wrapper = document.createElement('span');
-        wrapper.style.display = 'none'; // 個別初期非表示
+        wrapper.style.display = 'inline-block'; // 個別初期非表示
         const open = document.createElement('span'); open.textContent='('; open.style.fontSize='0.8em';
         const input = document.createElement('input');
         input.type='number'; input.min='0'; input.max='99'; input.dataset.tiebreak='A'; input.dataset.set=i; input.style.width='30px'; input.style.fontSize='0.8em'; input.placeholder='TB';
@@ -777,7 +798,7 @@ class MatchCard {
         this.tiebreakWrappers.forEach((w, idx) => w.style.display = idx === 0 ? 'inline-block' : 'none');
       }
       if (this.tiebreakRow) this.tiebreakRow.style.display = 'flex';
-      if (this.tiebreakDivB) this.tiebreakDivB.style.display = 'none';
+      if (this.tiebreakDivB) this.tiebreakDivB.style.display = 'inline-block';
     } else {
       // 非表示時
       if (this.tiebreakWrappers) this.tiebreakWrappers.forEach(w => w.style.display = 'none');
@@ -857,7 +878,7 @@ class MatchCard {
         // TB 行自体の表示
         this.tiebreakRow.style.display = 'flex';
       }
-      this.tiebreakDivB.style.display = 'none';
+      this.tiebreakDivB.style.display = 'inline-block';
     } else {
       if(this.tiebreakWrappers){this.tiebreakWrappers.forEach(w=>w.style.display='none');}
       this.tiebreakRow.style.display = 'flex';
