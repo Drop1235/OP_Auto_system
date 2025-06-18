@@ -44,6 +44,17 @@ function createWindow() {
   // Load the login.html file first
   mainWindow.loadFile('login.html');
   
+  // ページ読み込み完了後にウィンドウにフォーカスを当てる
+  mainWindow.webContents.on('did-finish-load', () => {
+    // 少し遅延させてフォーカスを当てる（描画完了を待つ）
+    setTimeout(() => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.focus();
+        mainWindow.webContents.focus();
+      }
+    }, 100);
+  });
+  
   // 本番リリースでは開発ツールを無効化
   // mainWindow.webContents.openDevTools();
 
@@ -87,6 +98,45 @@ ipcMain.handle('show-confirm-dialog', (event, message) => {
   };
   const result = dialog.showMessageBoxSync(mainWindow, options);
   return result === 0; // Return true if OK was pressed, false otherwise
+});
+
+// ログアウト時にウィンドウを再作成するIPC handler
+ipcMain.handle('focus-window', () => {
+  if (mainWindow) {
+    mainWindow.show();
+    mainWindow.focus();
+    mainWindow.webContents.focus();
+  }
+});
+
+// Show login page from main process and force focus
+ipcMain.handle('show-login', async () => {
+  if (!mainWindow) return;
+  try {
+    await mainWindow.loadFile('login.html');
+  } catch (e) {
+    console.error('loadFile error', e);
+  }
+  mainWindow.setAlwaysOnTop(true);
+  mainWindow.show();
+  mainWindow.focus();
+  mainWindow.webContents.focus();
+  setTimeout(() => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setAlwaysOnTop(false);
+    }
+  }, 50);
+});
+
+ipcMain.handle('restart-window', () => {
+  if (mainWindow) {
+    mainWindow.close();
+    mainWindow = null;
+  }
+  // 少し遅延してから新しいウィンドウを作成
+  setTimeout(() => {
+    createWindow();
+  }, 100);
 });
 
 // スクリーンショット機能のIPC handler

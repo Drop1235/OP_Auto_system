@@ -228,6 +228,19 @@ class MatchCard {
       setScoresContainerA.className = 'set-scores-container';
        
       this.tiebreakDivsA = [];
+      // A側セットスコア入力欄をコンテナに追加
+      scoreContainerA.appendChild(setScoresContainerA);
+
+      // --- タイブレーク行をカード下部にまとめて表示するためのコンテナを用意 ---
+      if (!this.tiebreakRow) {
+        const tRow = document.createElement('div');
+        tRow.className = 'tiebreak-row';
+        tRow.style.display = 'none';      // デフォルトは非表示、条件満たしたら表示
+        tRow.style.justifyContent = 'flex-end';
+        tRow.style.gap = '6px';
+        tRow.style.marginTop = '4px';
+        this.tiebreakRow = tRow;
+      }
       // 3セット分のスコア入力欄を作成
       for (let i = 0; i < 3; i++) {
         const setScoreInput = document.createElement('input');
@@ -235,7 +248,9 @@ class MatchCard {
         setScoreInput.min = '0';
         setScoreInput.max = '99';
         setScoreInput.className = 'set-score-input';
+        // データ属性を2種類保持しておくことで既存実装とユーティリティの両方に対応
         setScoreInput.dataset.player = 'A';
+        setScoreInput.dataset.setPlayer = 'A';
         setScoreInput.dataset.set = i;
         setScoreInput.value = this.match.setScores?.A[i] || '';
         
@@ -273,9 +288,17 @@ class MatchCard {
         const tbInput = document.createElement('input');
         tbInput.type='number'; tbInput.min='0'; tbInput.max='99'; tbInput.dataset.tiebreak='A'; tbInput.dataset.set=i; tbInput.style.width='24px'; tbInput.style.fontSize='0.7em';
         const tbClose = document.createElement('span'); tbClose.textContent=')'; tbClose.style.fontSize='0.8em';
-        tbWrapper.appendChild(tbOpen); tbWrapper.appendChild(tbInput); tbWrapper.appendChild(tbClose);
-        setScoresContainerA.appendChild(tbWrapper);
-        this.tiebreakDivsA[i]= {wrapper:tbWrapper, input:tbInput};
+        tbWrapper.appendChild(tbOpen);
+        tbWrapper.appendChild(tbInput);
+        tbWrapper.appendChild(tbClose);
+        // wrapper は下部の tiebreakRow へ追加
+        this.tiebreakRow.appendChild(tbWrapper);
+        // 参照配列に保持（_checkAndToggleTiebreakUI が利用）
+        if (!this.tiebreakWrappers) this.tiebreakWrappers = [];
+        if (!this.tiebreakInputs) this.tiebreakInputs = [];
+        this.tiebreakWrappers[i] = tbWrapper;
+        this.tiebreakInputs[i] = tbInput;
+        this.tiebreakDivsA[i] = { wrapper: tbWrapper, input: tbInput };
         tbInput.addEventListener('change',(e)=>{const v=e.target.value; const sc=v===''?null:parseInt(v,10); if(!this.match.tieBreakA) this.match.tieBreakA=[]; this.match.tieBreakA[i]=sc; this.updateMatchData({tieBreakA:this.match.tieBreakA});});
       }
 
@@ -471,6 +494,7 @@ class MatchCard {
         setInput.max = '99';
         setInput.className = 'set-score-input';
         setInput.dataset.player = 'B';
+        setInput.dataset.setPlayer = 'B';
         setInput.dataset.set = i;
         setInput.value = this.match.setScores?.B[i] || '';
 

@@ -328,30 +328,23 @@ document.addEventListener('DOMContentLoaded', () => {
         addMatchModal.style.display = 'block';
         
         // モーダルが表示された後に最初の入力フィールドにフォーカスを当てる
-        const enablePlayerInputs = () => {
-          const a = document.getElementById('player-a');
-          const b = document.getElementById('player-b');
-          if (a) { a.disabled = false; a.readOnly = false; }
-          if (b) { b.disabled = false; b.readOnly = false; }
-        };
-        enablePlayerInputs();
-
-        // 最大2秒間、100ms間隔で有効化を試みる（全削除直後の重い処理でも確実に入力可にする）
-        const enableInterval = setInterval(() => {
-          enablePlayerInputs();
-        }, 100);
-        setTimeout(() => clearInterval(enableInterval), 2000);
-
-        setTimeout(() => {
-          const playerAInput = document.getElementById('player-a');
-          if (playerAInput) {
-            // 念のため入力を有効化
-            playerAInput.disabled = false;
-            playerAInput.readOnly = false;
-            playerAInput.focus();
-            console.log('[APP] Focus set to player A input');
-          }
-        }, 100);
+        // --- 入力欄を即時有効化しフォーカスする処理 ---
+        const a = document.getElementById('player-a');
+        const b = document.getElementById('player-b');
+        if (a) {
+          a.removeAttribute('disabled');
+          a.readOnly = false;
+          a.style.pointerEvents = 'auto';
+        }
+        if (b) {
+          b.removeAttribute('disabled');
+          b.readOnly = false;
+          b.style.pointerEvents = 'auto';
+        }
+        // 1フレーム後にフォーカスを当てることで描画確定後に入力可能とする
+        requestAnimationFrame(() => {
+          if (a) a.focus();
+        });
       }
       return false; // イベントの伝播を停止
     };

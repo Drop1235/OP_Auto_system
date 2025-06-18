@@ -11,8 +11,14 @@ document.addEventListener('DOMContentLoaded', () => {
     logoutButton.addEventListener('click', () => {
       if (confirm('本当にログアウトしますか？')) {
         localStorage.removeItem('isAuthenticated');
-        // ページをリロードし、認証チェックにより自動でログイン画面へ遷移
-        window.location.reload();
+        
+        // ログイン画面への遷移前にローカルストレージにフラグを設定
+        localStorage.setItem('justLoggedOut', 'true');
+        
+        // メインプロセスにログイン画面表示を依頼（フォーカス確保）
+        if (window.electronAPI && window.electronAPI.showLogin) {
+          window.electronAPI.showLogin();
+        }
       }
     });
   }
