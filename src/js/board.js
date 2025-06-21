@@ -249,9 +249,11 @@ class Board {
     console.log('[BOARD] Creating new MatchCard instance');
     const matchCard = new MatchCard(match);
     console.log('[BOARD] MatchCard created:', matchCard);
+
+    // マッチカードをマップに登録（更新処理や次回のコートグリッド更新で参照するため）
+    this.matchCards.set(match.id, matchCard);
     console.log('[BOARD] MatchCard match game format:', matchCard.match.gameFormat);
     console.log('[BOARD] MatchCard element:', matchCard.element);
-    this.matchCards.set(match.id, matchCard);
     
     // 未割当の場合は未割当カードエリアに配置
     if (!match.courtNumber || !match.rowPosition) {
@@ -341,7 +343,7 @@ class Board {
   setupCourtSettings() {
     // コート数の増減ボタンのイベントリスナーを設定
     if (this.decreaseCourtsBtn) {
-      this.decreaseCourtsBtn.addEventListener('click', () => {
+      this.decreaseCourtsBtn.addEventListener('click', async () => {
         if (this.numberOfCourts > 1) {
           // 削除されるコートにマッチカードがあるかチェック
           const matchesInLastCourt = this.getMatchesInCourt(this.numberOfCourts);
@@ -354,29 +356,29 @@ class Board {
               // ユーザーがOKした場合、該当するマッチを削除
               this.deleteMatchesInCourt(this.numberOfCourts);
               this.numberOfCourts--;
-              this.updateCourtGrid();
+              await this.updateCourtGrid();
             }
             // ユーザーがキャンセルした場合は何もしない
           } else {
             // 削除されるコートにマッチカードがない場合はそのまま減らす
             this.numberOfCourts--;
-            this.updateCourtGrid();
+            await this.updateCourtGrid();
           }
         }
       });
     }
     
     if (this.increaseCourtsBtn) {
-      this.increaseCourtsBtn.addEventListener('click', () => {
+      this.increaseCourtsBtn.addEventListener('click', async () => {
         if (this.numberOfCourts < 24) { // 最大24コートまで
           this.numberOfCourts++;
-          this.updateCourtGrid();
+          await this.updateCourtGrid();
         }
       });
     }
     
     if (this.deleteAllMatchesBtn) {
-      this.deleteAllMatchesBtn.addEventListener('click', () => {
+      this.deleteAllMatchesBtn.addEventListener('click', async () => {
         // 現在のマッチカード数を取得
         const matchCount = this.matchCards.size;
         
@@ -398,41 +400,69 @@ class Board {
   }
 
   // コートグリッドを更新（既存のマッチカードデータを保持）
-  updateCourtGrid() {
+  async updateCourtGrid() {
     console.log('[BOARD] updateCourtGrid called');
     
     // 現在のマッチカードの状態を保存
     const currentMatchStates = new Map();
     console.log('[BOARD] Current matchCards size:', this.matchCards.size);
     
-    this.matchCards.forEach((matchCard, matchId) => {
+    for (const [matchId, matchCard] of this.matchCards) {
       console.log('[BOARD] Processing matchCard ID:', matchId, 'matchCard:', matchCard);
       
       if (matchCard && matchCard.match) {
-        // スコアやその他の状態を保存
-        const scoreA = matchCard.getScoreA ? matchCard.getScoreA() : matchCard.match.scoreA;
-        const scoreB = matchCard.getScoreB ? matchCard.getScoreB() : matchCard.match.scoreB;
-        const setScores = matchCard.getSetScores ? matchCard.getSetScores() : matchCard.match.setScores;
-        const tiebreakScore = matchCard.getTiebreakScore ? matchCard.getTiebreakScore() : {
-          A: matchCard.match.tieBreakA || '',
-          B: matchCard.match.tieBreakB || ''
-        };
-        
-        console.log('[BOARD] Saving state for match', matchId, '- ScoreA:', scoreA, 'ScoreB:', scoreB);
-        
-        const currentState = {
-          ...matchCard.match,
-          scoreA: scoreA,
-          scoreB: scoreB,
-          setScores: setScores,
-          tieBreakA: tiebreakScore.A,
-          tieBreakB: tiebreakScore.B,
-          winner: matchCard.match.winner
-        };
-        currentMatchStates.set(matchId, currentState);
+      const format = (matchCard.match.gameFormat || '').toLowerCase();
+      const multiSet = /2set|3set/.test(format);
+      // マッチカードをマップに登録（更新処理や次回のコートグリッド更新で参照するため）
+      // 現在のスコアを取得して保存（DOM削除前に確実に内部データを保持）
+      let scoreA = matchCard.match.scoreA;
+      let scoreB = matchCard.match.scoreB;
+      
+      console.log('[BOARD] Initial scores from match data - ScoreA:', scoreA, 'ScoreB:', scoreB);
+      
+      // マルチセット形式の場合は合計スコアを再計算
+      if (multiSet) {
+        try { matchCard.calculateTotalScore(); } catch(e){ console.warn('calculateTotalScore failed',e);} 
+        scoreA = matchCard.match.scoreA;
+        scoreB = matchCard.match.scoreB;
       }
-    });
-
+      
+      // DOM入力値も参考として取得（ただし内部データを優先）
+      const domScoreA = matchCard.getScoreA ? matchCard.getScoreA() : null;
+      const domScoreB = matchCard.getScoreB ? matchCard.getScoreB() : null;
+      
+      // DOM入力値が有効で内部データと異なる場合のみ更新
+      if (domScoreA !== null && domScoreA !== '' && domScoreA !== scoreA) {
+        console.log('[BOARD] Using DOM scoreA:', domScoreA, 'instead of match data:', scoreA);
+        scoreA = domScoreA;
+      }
+      if (domScoreB !== null && domScoreB !== '' && domScoreB !== scoreB) {
+        console.log('[BOARD] Using DOM scoreB:', domScoreB, 'instead of match data:', scoreB);
+        scoreB = domScoreB;
+      }
+      
+      // 数値として保持されている場合は文字列へ変換
+      if (typeof scoreA === 'number') scoreA = String(scoreA);
+      if (typeof scoreB === 'number') scoreB = String(scoreB);
+      
+      // null/undefined の場合は空文字に統一
+      if (scoreA == null) scoreA = '';
+      if (scoreB == null) scoreB = '';
+      
+      const currentState = {
+        ...matchCard.match,
+        scoreA: scoreA,
+        scoreB: scoreB,
+        setScores: matchCard.getSetScores ? matchCard.getSetScores() : matchCard.match.setScores,
+        tieBreakA: matchCard.getTiebreakScore ? matchCard.getTiebreakScore().A : matchCard.match.tieBreakA,
+        tieBreakB: matchCard.getTiebreakScore ? matchCard.getTiebreakScore().B : matchCard.match.tieBreakB,
+        winner: matchCard.match.winner
+      };
+      currentMatchStates.set(matchId, currentState);
+      
+      console.log('[BOARD] Saved state for match', matchId, '- ScoreA:', scoreA, 'ScoreB:', scoreB, 'Full state:', currentState);
+    }
+    }
     console.log('[BOARD] Saved states count:', currentMatchStates.size);
 
     // マッチカードマップをクリア
@@ -442,16 +472,15 @@ class Board {
     this.createCourtGrid();
     
     // 保存した状態でマッチカードを復元
-    currentMatchStates.forEach((matchState, matchId) => {
+    for (const [matchId, matchState] of currentMatchStates) {
       console.log('[BOARD] Restoring match', matchId, 'with scoreA:', matchState.scoreA, 'scoreB:', matchState.scoreB);
-      
-      // データベースから最新のマッチデータを取得
+      // データベースから最新のマッチデータを取得（非同期）
       let matchData = null;
-      if (window.db) {
+      if (window.db && typeof window.db.getMatch === 'function') {
         try {
-          matchData = window.db.getMatch(matchId);
+          matchData = await window.db.getMatch(matchId);
         } catch (error) {
-          console.warn('Failed to get match from database:', error);
+          console.warn('Failed to get match from database during restore:', error);
         }
       }
       
@@ -472,14 +501,14 @@ class Board {
       
       // データベースの該当マッチも更新
       if (window.db) {
-        window.db.updateMatch(matchData).catch(error => {
+        await window.db.updateMatch(matchData).catch(error => {
           console.warn('Failed to update match in database during court grid update:', error);
         });
       }
       
       // マッチカードを再作成して配置
       this.createAndPlaceMatchCard(matchData);
-    });
+    }
     
     // コート選択オプションを更新
     this.updateCourtSelectOptions();

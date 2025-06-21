@@ -10,20 +10,36 @@ class MatchCard {
     this.initialTop = 0;
     this.dragThreshold = 5; // px
     
-    // スコア文字列をパースしてセットスコアを算出
     const numSets = this._getNumberOfSets(); // 試合形式に応じたセット数
-    this.scoresA = this._parseScores(this.match.scoreA, numSets);
-    this.scoresB = this._parseScores(this.match.scoreB, numSets);
 
-    // setScores が未定義、または長さが一致しない場合は、パース結果で上書き
-    this.match.setScores = {
-      A: [...this.scoresA],
-      B: [...this.scoresB]
-    };
+    // 既に setScores が提供されている場合はそれを優先
+    if (this.match.setScores && Array.isArray(this.match.setScores.A) && this.match.setScores.A.length === numSets) {
+      this.scoresA = [...this.match.setScores.A];
+      this.scoresB = [...this.match.setScores.B];
+    } else {
+      // スコア文字列をパースしてセットスコアを算出
+      this.scoresA = this._parseScores(this.match.scoreA, numSets);
+      this.scoresB = this._parseScores(this.match.scoreB, numSets);
+      // setScores が未定義、または長さが一致しない場合は、パース結果で上書き
+      this.match.setScores = {
+        A: [...this.scoresA],
+        B: [...this.scoresB]
+      };
+    }
 
-    // 旧ロジック互換のため scoreA / scoreB 文字列も整形して保持
-    this.match.scoreA = this._stringifyScores(this.scoresA);
-    this.match.scoreB = this._stringifyScores(this.scoresB);
+    // scoreA / scoreB 文字列を整形して保持（setScores がある場合でも最新化）
+    // ただし、5game形式の場合は既存のスコアが適切であれば再フォーマットしない
+    const format = (this.match.gameFormat || '').toLowerCase();
+    const isSingleGame = format === '5game' || format === '4game1set' || format === '6game1set' || format === '8game1set';
+    
+    if (isSingleGame && this.match.scoreA !== undefined && this.match.scoreA !== null && this.match.scoreA !== '') {
+      // 5game等の単一ゲーム形式で既にスコアが設定されている場合は保持
+      console.log('[MATCH_CARD] Preserving existing scores for single game format:', this.match.scoreA, this.match.scoreB);
+    } else {
+      // マルチセット形式または初期化時は再フォーマット
+      this.match.scoreA = this._stringifyScores(this.scoresA);
+      this.match.scoreB = this._stringifyScores(this.scoresB);
+    }
 
     // 勝者情報の初期化
     if (this.match.winner === undefined) {
@@ -70,7 +86,9 @@ class MatchCard {
       // BO3（2セット先取）
       case '4game2set':
       case '6game2set':
-        return 2;
+        // 2セット終了後にマッチタイブレーク（ファイナルセット）が行われるため、
+        // UI上は 3 セット分の入力欄を確保する
+        return 3;
       // それ以外（ワンセットマッチ等）
       default:
         return 1;
@@ -757,7 +775,7 @@ class MatchCard {
       }
     }
 
-    // 単セット形式 (1set) の判定
+    // 単セット形式のTB表示条件
     if (!showTiebreak) {
       if (format === '6game1set' && ((scoreA === 7 && scoreB === 6) || (scoreA === 6 && scoreB === 7))) {
         showTiebreak = true;
@@ -776,14 +794,19 @@ class MatchCard {
         this.tiebreakWrappers.forEach((wrapper, idx) => {
           const sA = parseInt(setScores.A[idx], 10);
           const sB = parseInt(setScores.B[idx], 10);
-          let perSetShow = false;
+          let show = false;
 
-          if (format.startsWith('6game') && ((sA === 7 && sB === 6) || (sA === 6 && sB === 7))) perSetShow = true;
-          if (format.startsWith('4game') && ((sA === 5 && sB === 4) || (sA === 4 && sB === 5))) perSetShow = true;
-          if (format.startsWith('8game') && ((sA === 9 && sB === 8) || (sA === 8 && sB === 9))) perSetShow = true;
+          if (format.startsWith('6game') && ((sA === 7 && sB === 6) || (sA === 6 && sB === 7))) show = true;
+          if (format.startsWith('4game') && ((sA === 5 && sB === 4) || (sA === 4 && sB === 5))) show = true;
+          if (format.startsWith('8game') && ((sA === 9 && sB === 8) || (sA === 8 && sB === 9))) show = true;
 
-          wrapper.style.display = perSetShow ? 'inline-block' : 'none';
-          if (perSetShow) {
+          // 2set+10MTB 形式ではファイナルセット（idx === 2）はマッチタイブレークのため別入力欄を表示しない
+          if ((this.match.gameFormat === '4game2set' || this.match.gameFormat === '6game2set') && idx === 2) {
+            show = false;
+          }
+
+          wrapper.style.display = show ? 'inline-block' : 'none';
+          if (show) {
             const stored = Array.isArray(this.match.tieBreakA) ? this.match.tieBreakA[idx] : '';
             if (this.tiebreakInputs && this.tiebreakInputs[idx]) {
               this.tiebreakInputs[idx].value = stored != null ? stored : '';
@@ -797,8 +820,10 @@ class MatchCard {
       if (format.includes('1set') && this.tiebreakWrappers && this.tiebreakWrappers.length) {
         this.tiebreakWrappers.forEach((w, idx) => w.style.display = idx === 0 ? 'inline-block' : 'none');
       }
-      if (this.tiebreakRow) this.tiebreakRow.style.display = 'flex';
-      if (this.tiebreakDivB) this.tiebreakDivB.style.display = 'inline-block';
+      // ラッパーのいずれかが表示されているか確認し、行全体を切り替え
+      const anyVisible = this.tiebreakWrappers && Array.from(this.tiebreakWrappers).some(w => w.style.display !== 'none');
+      if (this.tiebreakRow) this.tiebreakRow.style.display = anyVisible ? 'flex' : 'none';
+      if (this.tiebreakDivB) this.tiebreakDivB.style.display = anyVisible ? 'inline-block' : 'none';
     } else {
       // 非表示時
       if (this.tiebreakWrappers) this.tiebreakWrappers.forEach(w => w.style.display = 'none');
@@ -830,6 +855,7 @@ class MatchCard {
         const sA = parseInt(setScores.A[i], 10);
         const sB = parseInt(setScores.B[i], 10);
         if (isNaN(sA) || isNaN(sB)) continue;
+
         if (format.startsWith('6game')) {
           if ((sA === 7 && sB === 6) || (sA === 6 && sB === 7)) {
             showTiebreak = true;
@@ -933,7 +959,7 @@ async updateMatchData(updatedData) {
         console.error('Failed to update match in DB:', error);
       }
     } else {
-      console.warn('db.updateMatch function not found. Match data updated in component state only.');
+      console.warn('db.updateMatch function not found, skipping DB update');
     }
     this.updateWinStatus();
     this.updateEndTimeDisplay();
@@ -1031,7 +1057,7 @@ async checkLeagueWinCondition() {
     showDebug('[DEBUG] format: ' + format);
     showDebug('[DEBUG] scoreA: ' + scoreA + ', scoreB: ' + scoreB);
     
-    // BO3形式（4G/6G 2set・3set）の勝者判定を追加
+    // BO3形式（4G/6G 2set・3set 等）のみ判定
     const bo3Formats = ['4game3set', '6game3set', '4game2set', '6game2set'];
     if (bo3Formats.includes(this.match.gameFormat)) {
       const setA = (this.match.setScores && Array.isArray(this.match.setScores.A)) ? this.match.setScores.A : [];
@@ -1042,8 +1068,20 @@ async checkLeagueWinCondition() {
         const sA = parseInt(setA[i], 10);
         const sB = parseInt(setB[i], 10);
         if (isNaN(sA) || isNaN(sB)) continue; // スコア未入力のセットは無視
-        if (sA > sB) winsA++;
-        else if (sB > sA) winsB++;
+
+        // 2set+10MTB 形式のファイナルセット（マッチタイブレーク）は 10ポイント先取かつ2ポイント差が必要
+        const isMatchTiebreak = (this.match.gameFormat === '4game2set' || this.match.gameFormat === '6game2set') && i === 2;
+        if (isMatchTiebreak) {
+          // 勝者判定条件: 10ポイント以上 & 2ポイント差
+          if ((sA >= 10 || sB >= 10) && Math.abs(sA - sB) >= 2) {
+            if (sA > sB) winsA++;
+            else if (sB > sA) winsB++;
+          }
+        } else {
+          // 通常セットの勝者判定
+          if (sA > sB) winsA++;
+          else if (sB > sA) winsB++;
+        }
       }
       let newWinner = null;
       let newStatus = this.match.status;
@@ -1173,7 +1211,7 @@ async checkLeagueWinCondition() {
       if (scoreAEntered && scoreBEntered) {
         showDebug('[DEBUG] 両方のスコアが入力済み');
         
-        // 6ゲーム到達かつ2ゲーム差以上
+        // 6ゲーム到達かつ2ゲーム差
         if ((scoreA >= 6 || scoreB >= 6) && Math.abs(scoreA - scoreB) >= 2) {
           showDebug('[DEBUG] 6到達＆2差クリア');
           if (scoreA > scoreB) {
@@ -1516,13 +1554,15 @@ update(newMatchData) {
         // セットスコア形式の場合は合計スコアを取得
         if (scoreInput.classList.contains('set-score-input')) {
           const totalScoreElement = this.element.querySelector('.total-score[data-player="A"]');
-          return totalScoreElement ? totalScoreElement.textContent : this.match.scoreA;
+          const val = totalScoreElement ? totalScoreElement.textContent : '';
+          if (val !== '' && val != null) return val;
         } else {
-          return scoreInput.value;
+          if (scoreInput.value !== '' && scoreInput.value != null) return scoreInput.value;
         }
       }
     }
-    return this.match.scoreA;
+    const scoreFallbackA = this.match.scoreA;
+    return (scoreFallbackA === undefined || scoreFallbackA === null) ? '' : String(scoreFallbackA);
   }
 
   getScoreB() {
@@ -1533,13 +1573,15 @@ update(newMatchData) {
         // セットスコア形式の場合は合計スコアを取得
         if (scoreInput.classList.contains('set-score-input')) {
           const totalScoreElement = this.element.querySelector('.total-score[data-player="B"]');
-          return totalScoreElement ? totalScoreElement.textContent : this.match.scoreB;
+          const val = totalScoreElement ? totalScoreElement.textContent : '';
+          if (val !== '' && val != null) return val;
         } else {
-          return scoreInput.value;
+          if (scoreInput.value !== '' && scoreInput.value != null) return scoreInput.value;
         }
       }
     }
-    return this.match.scoreB;
+    const scoreFallbackB = this.match.scoreB;
+    return (scoreFallbackB === undefined || scoreFallbackB === null) ? '' : String(scoreFallbackB);
   }
 
   getTiebreakScore() {
@@ -1560,17 +1602,27 @@ update(newMatchData) {
   // セットスコアを取得
   getSetScores() {
     const setScores = { A: [], B: [] };
+    const numSetsExpected = this._getNumberOfSets();
     if (this.element) {
       const setInputsA = this.element.querySelectorAll('input[data-set-player="A"]');
       const setInputsB = this.element.querySelectorAll('input[data-set-player="B"]');
       
       setInputsA.forEach((input, index) => {
-        setScores.A[index] = input.value || null;
+        if (index < numSetsExpected) {
+          setScores.A[index] = input.value || null;
+        }
       });
       
       setInputsB.forEach((input, index) => {
-        setScores.B[index] = input.value || null;
+        if (index < numSetsExpected) {
+          setScores.B[index] = input.value || null;
+        }
       });
+      // 期待される数に合わせてトリム / パディング
+      setScores.A = setScores.A.slice(0, numSetsExpected);
+      setScores.B = setScores.B.slice(0, numSetsExpected);
+      while (setScores.A.length < numSetsExpected) setScores.A.push(null);
+      while (setScores.B.length < numSetsExpected) setScores.B.push(null);
     } else {
       // フォールバック: match.setScoresから取得
       setScores.A = this.match.setScores?.A || [];
