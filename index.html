@@ -12,7 +12,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
   <script src="src/js/firebase-config.js"></script>
   <link rel="icon" href="assets/icon.png">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https:;">
 </head>
 <body>
   <!-- 新規大会名入力モーダル -->
@@ -56,9 +56,18 @@
             <button id="decrease-courts-btn">-</button>
             <span id="court-count-display" class="court-count-display">12</span>
             <button id="increase-courts-btn">+</button>
+          </div>
+          
+          <!-- エクスポートボタン -->
+          <div class="export-controls" style="margin-right:8px;">
+            <select id="board-export-type" style="margin-right:4px;">
+              <option value="csv">CSV形式</option>
+              <option value="screenshot">スクリーンショット</option>
+            </select>
+            <button id="board-export-btn" class="export-btn">書き出し</button>
+          </div>
           
           <button id="delete-all-matches-btn" class="delete-all-btn">全削除</button>
-        </div>
       </div>
       <div id="court-grid" class="court-grid"></div>
       
@@ -147,6 +156,9 @@
     </div>
   </div>
 
+  <!-- html2canvas for screenshot functionality -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  
   <script src="src/js/favicon.js"></script>
   <script src="src/js/database.js"></script>
   <script src="src/js/matchCard.js"></script>

@@ -771,21 +771,81 @@ class History {
         return;
       }
       
-      // CSVヘッダー作成
-      let csvContent = 'コート,プレイヤーA,プレイヤーB,予定開始時刻,実際開始時刻,実際終了時刻\n';
+      // CSVヘッダー作成（実際終了時刻を追加）
+      let csvContent = 'コート,プレイヤーA,プレイヤーB,スコア,実際終了時刻,勝者\n';
       
       // 各マッチを行として追加
       sortedMatches.forEach(match => {
         const courtNumber = match.courtNumber || 'N/A';
-        const playerA = `"${match.playerA.replace(/"/g, '""')}"`; // 引用符のエスケープ
+        const playerA = `"${match.playerA.replace(/"/g, '""')}"`;
         const playerB = `"${match.playerB.replace(/"/g, '""')}"`;
-        const scheduledStart = match.scheduledStartTime ? new Date(match.scheduledStartTime).toLocaleString() : 'N/A';
-        const actualStart = match.actualStartTime ? new Date(match.actualStartTime).toLocaleString() : 'N/A';
-        const actualEnd = match.actualEndTime ? new Date(match.actualEndTime).toLocaleString() : 'N/A';
         
-        csvContent += `${courtNumber},${playerA},${playerB},${scheduledStart},${actualStart},${actualEnd}\n`;
+        // スコア情報を構築
+        let scoreText = 'N/A';
+        console.log('History Match data for court', courtNumber, ':', match); // デバッグ用
+        
+        // setScoresの構造を確認
+        if (match.setScores) {
+          console.log('History setScores structure:', match.setScores); // デバッグ用
+          
+          // setScoresが配列の場合とオブジェクトの場合を両方対応
+          let scoresA, scoresB;
+          if (Array.isArray(match.setScores)) {
+            // 配列形式の場合（古い形式）
+            scoresA = match.setScores;
+            scoresB = match.setScoresB || [];
+          } else if (match.setScores.A && match.setScores.B) {
+            // オブジェクト形式の場合
+            scoresA = match.setScores.A;
+            scoresB = match.setScores.B;
+          } else {
+            // その他の形式を確認
+            scoresA = match.setScores.playerA || match.setScores.a || [];
+            scoresB = match.setScores.playerB || match.setScores.b || [];
+          }
+          
+          const scoreParts = [];
+          const maxSets = Math.max(scoresA ? scoresA.length : 0, scoresB ? scoresB.length : 0);
+          
+          for (let i = 0; i < maxSets; i++) {
+            const scoreA = scoresA && scoresA[i] !== undefined && scoresA[i] !== null ? scoresA[i] : '';
+            const scoreB = scoresB && scoresB[i] !== undefined && scoresB[i] !== null ? scoresB[i] : '';
+            
+            if (scoreA !== '' || scoreB !== '') {
+              let setScore = `${scoreA}-${scoreB}`;
+              
+              // タイブレークスコアがある場合は追加
+              if (match.tieBreakA && match.tieBreakA[i] !== undefined && match.tieBreakA[i] !== null && match.tieBreakA[i] !== '') {
+                setScore += `(${match.tieBreakA[i]})`;
+              }
+              scoreParts.push(setScore);
+            }
+          }
+          
+          if (scoreParts.length > 0) {
+            scoreText = `"${scoreParts.join(' ')}"`;
+          }
+        }
+        
+        // 実際終了時刻を取得
+        const actualEnd = match.actualEndTime ? new Date(match.actualEndTime).toLocaleString('ja-JP') : 'N/A';
+        
+        // 勝者情報を修正（A/Bではなく実際の名前を表示）
+        let winnerName = 'N/A';
+        if (match.winner) {
+          if (match.winner === 'A' || match.winner === 'playerA') {
+            winnerName = `"${match.playerA.replace(/"/g, '""')}"`;
+          } else if (match.winner === 'B' || match.winner === 'playerB') {
+            winnerName = `"${match.playerB.replace(/"/g, '""')}"`;
+          } else {
+            // 既に名前が入っている場合
+            winnerName = `"${match.winner.replace(/"/g, '""')}"`;
+          }
+        }
+        
+        csvContent += `${courtNumber},${playerA},${playerB},${scoreText},${actualEnd},${winnerName}\n`;
       });
-      
+        
       // Electron APIを使って保存先を選択する
       const defaultFilename = `テニス試合記録_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '-')}.csv`;
       

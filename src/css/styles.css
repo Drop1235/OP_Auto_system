@@ -1244,3 +1244,33 @@ th:hover {
 .match-card .delete-button:hover {
   background: #c82333;
 }
+
+/* Export Controls */
+.export-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.export-btn {
+  background-color: #17a2b8;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.export-btn:hover {
+  background-color: #138496;
+}
+
+#board-export-type {
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background: white;
+}

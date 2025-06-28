@@ -30,7 +30,8 @@ class Board {
     // this.loadGameFormat() は定義されていないため削除
     this.setupCourtSettings(); // This will also set up game format control
     this.updateCourtSelectOptions(); // Populate court select options on init
-    this.setupUnassignedArea(); // 未割当エリアのドラッグ＆ドロップ機能を設定
+    this.setupUnassignedArea(); // 未割当エリアのドラッグ＆��ロップ機能を設定
+    this.setupExportFunctions(); // エクスポート機能のセットアップ
   }
 
   // Create the court grid with the specified number of courts
@@ -879,5 +880,283 @@ class Board {
       }
     };
     removeBatch();
+  }
+
+  // エクスポート機能のセットアップ
+  setupExportFunctions() {
+    const exportBtn = document.getElementById('board-export-btn');
+    const exportTypeSelect = document.getElementById('board-export-type');
+    
+    if (exportBtn) {
+      exportBtn.addEventListener('click', () => {
+        const exportType = exportTypeSelect.value;
+        if (exportType === 'csv') {
+          this.exportToCSV();
+        } else if (exportType === 'screenshot') {
+          this.exportToScreenshot();
+        }
+      });
+    }
+  }
+
+  // CSV形式で対戦表をエクスポート
+  async exportToCSV() {
+    try {
+      // 全てのマッチカードからデータを収集
+      const allMatches = [];
+      this.matchCards.forEach((matchCard, matchId) => {
+        allMatches.push(matchCard.match);
+      });
+      
+      if (allMatches.length === 0) {
+        alert('書き出し可能な試合データがありません');
+        return;
+      }
+      
+      // コート番号でソート
+      allMatches.sort((a, b) => {
+        const courtA = parseInt(a.courtNumber) || 999;
+        const courtB = parseInt(b.courtNumber) || 999;
+        return courtA - courtB;
+      });
+      
+      // CSVヘッダー作成（実際終了時刻を追加）
+      let csvContent = 'コート,プレイヤーA,プレイヤーB,スコア,実際終了時刻,勝者\n';
+      
+      // 各マッチを行として追加
+      allMatches.forEach(match => {
+        const courtNumber = match.courtNumber || 'N/A';
+        const playerA = `"${match.playerA.replace(/"/g, '""')}"`;
+        const playerB = `"${match.playerB.replace(/"/g, '""')}"`;
+        
+        // スコア情報を構築
+        let scoreText = 'N/A';
+        console.log('Match data for court', courtNumber, ':', match); // デバッグ用
+        
+        // setScoresの構造を確認
+        if (match.setScores) {
+          console.log('setScores structure:', match.setScores); // デバッグ用
+          
+          // setScoresが配列の場合とオブジェクトの場合を両方対応
+          let scoresA, scoresB;
+          if (Array.isArray(match.setScores)) {
+            // 配列形式の場合（古い形式）
+            scoresA = match.setScores;
+            scoresB = match.setScoresB || [];
+          } else if (match.setScores.A && match.setScores.B) {
+            // オブジェクト形式の場合
+            scoresA = match.setScores.A;
+            scoresB = match.setScores.B;
+          } else {
+            // その他の形式を確認
+            scoresA = match.setScores.playerA || match.setScores.a || [];
+            scoresB = match.setScores.playerB || match.setScores.b || [];
+          }
+          
+          const scoreParts = [];
+          const maxSets = Math.max(scoresA ? scoresA.length : 0, scoresB ? scoresB.length : 0);
+          
+          for (let i = 0; i < maxSets; i++) {
+            const scoreA = scoresA && scoresA[i] !== undefined && scoresA[i] !== null ? scoresA[i] : '';
+            const scoreB = scoresB && scoresB[i] !== undefined && scoresB[i] !== null ? scoresB[i] : '';
+            
+            if (scoreA !== '' || scoreB !== '') {
+              let setScore = `${scoreA}-${scoreB}`;
+              
+              // タイブレークスコアがある場合は追加
+              if (match.tieBreakA && match.tieBreakA[i] !== undefined && match.tieBreakA[i] !== null && match.tieBreakA[i] !== '') {
+                setScore += `(${match.tieBreakA[i]})`;
+              }
+              scoreParts.push(setScore);
+            }
+          }
+          
+          if (scoreParts.length > 0) {
+            scoreText = `"${scoreParts.join(' ')}"`;
+          }
+        }
+        
+        // 実際終了時刻を取得
+        const actualEnd = match.actualEndTime ? new Date(match.actualEndTime).toLocaleString('ja-JP') : 'N/A';
+        
+        // 勝者情報を修正（A/Bではなく実際の名前を表示）
+        let winnerName = 'N/A';
+        if (match.winner) {
+          if (match.winner === 'A' || match.winner === 'playerA') {
+            winnerName = `"${match.playerA.replace(/"/g, '""')}"`;
+          } else if (match.winner === 'B' || match.winner === 'playerB') {
+            winnerName = `"${match.playerB.replace(/"/g, '""')}"`;
+          } else {
+            // 既に名前が入っている場合
+            winnerName = `"${match.winner.replace(/"/g, '""')}"`;
+          }
+        }
+        
+        csvContent += `${courtNumber},${playerA},${playerB},${scoreText},${actualEnd},${winnerName}\n`;
+      });
+      
+      // ファイル名を生成
+      const defaultFilename = `対戦表_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '-')}.csv`;
+      
+      // 保存処理
+      if (window.api && window.api.saveCSVFile) {
+        try {
+          const result = await window.api.saveCSVFile(csvContent, defaultFilename);
+          if (result.success) {
+            console.log('ファイルが保存されました:', result.path);
+          } else if (result.canceled) {
+            console.log('CSV保存がキャンセルされました');
+          } else {
+            console.error('CSV保存エラー:', result.error);
+            alert('ファイルの保存に失敗しました: ' + result.error);
+          }
+        } catch (error) {
+          console.error('CSV保存APIエラー:', error);
+          this._fallbackCSVSave(csvContent, defaultFilename);
+        }
+      } else {
+        console.warn('ネイティブのCSV保存APIが利用できないため、ブラウザの保存機能を使用します');
+        this._fallbackCSVSave(csvContent, defaultFilename);
+      }
+    } catch (error) {
+      console.error('CSVエクスポートエラー:', error);
+      alert('データの書き出し中にエラーが発生しました');
+    }
+  }
+
+  // フォールバックCSV保存機能
+  _fallbackCSVSave(csvContent, filename) {
+    try {
+      // BOMを追加してExcelで文字化けを防ぐ
+      const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+      const csvData = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8' });
+      
+      const url = URL.createObjectURL(csvData);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      console.log('CSVファイルがダウンロードされました:', filename);
+    } catch (error) {
+      console.error('フォールバックCSV保存エラー:', error);
+      alert('CSVファイルの保存に失敗しました');
+    }
+  }
+
+  // スクリーンショットエクスポート
+  async exportToScreenshot() {
+    try {
+      console.log('スクリーンショット機能開始');
+      
+      // html2canvasライブラリの確認
+      if (typeof html2canvas === 'undefined') {
+        console.error('html2canvas is undefined');
+        alert('スクリーンショット機能に必要なライブラリが読み込まれていません。\nページを再読み込みしてから再度お試しください。');
+        return;
+      }
+      
+      console.log('html2canvas is available');
+      
+      // 対戦表のコンテナをキャプチャ
+      const boardElement = document.getElementById('board-view');
+      if (!boardElement) {
+        console.error('board-view element not found');
+        alert('対戦表が見つかりません');
+        return;
+      }
+      
+      console.log('Board element found:', boardElement);
+      
+      // スクリーンショット作成中のメッセージを表示
+      const originalText = document.getElementById('board-export-btn').textContent;
+      document.getElementById('board-export-btn').textContent = '作成中...';
+      document.getElementById('board-export-btn').disabled = true;
+      
+      console.log('スクリーンショット作成開始');
+      
+      const canvas = await html2canvas(boardElement, {
+        backgroundColor: '#ffffff',
+        scale: 1,
+        useCORS: true,
+        allowTaint: true,
+        logging: true,
+        width: boardElement.scrollWidth,
+        height: boardElement.scrollHeight
+      });
+      
+      console.log('スクリーンショット作成完了');
+      
+      // ファイル名を生成
+      const defaultFilename = `対戦表_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '-')}.png`;
+      
+      // CanvasをBlobに変換
+      canvas.toBlob(async (blob) => {
+        try {
+          if (window.api && window.api.saveImageFile) {
+            try {
+              // BlobをArrayBufferに変換
+              const arrayBuffer = await blob.arrayBuffer();
+              const uint8Array = new Uint8Array(arrayBuffer);
+              
+              const result = await window.api.saveImageFile(uint8Array, defaultFilename);
+              if (result.success) {
+                console.log('スクリーンショットが保存されました:', result.path);
+                alert('スクリーンショットが保存されました');
+              } else if (result.canceled) {
+                console.log('スクリーンショット保存がキャンセルされました');
+              } else {
+                console.error('スクリーンショット保存エラー:', result.error);
+                alert('スクリーンショットの保存に失敗しました: ' + result.error);
+              }
+            } catch (error) {
+              console.error('スクリーンショット保存APIエラー:', error);
+              this._fallbackImageSave(blob, defaultFilename);
+            }
+          } else {
+            console.warn('ネイティブのスクリーンショット保存APIが利用できないため、ブラウザの保存機能を使用します');
+            this._fallbackImageSave(blob, defaultFilename);
+          }
+        } finally {
+          // ボタンを元に戻す
+          document.getElementById('board-export-btn').textContent = originalText;
+          document.getElementById('board-export-btn').disabled = false;
+        }
+      }, 'image/png');
+      
+    } catch (error) {
+      console.error('スクリーンショットエクスポートエラー:', error);
+      alert('スクリーンショットの作成中にエラーが発生しました: ' + error.message);
+    } finally {
+      // エラー時もボタンを元に戻す
+      try {
+        document.getElementById('board-export-btn').textContent = originalText;
+        document.getElementById('board-export-btn').disabled = false;
+      } catch (e) {
+        console.error('ボタンのリセットに失敗:', e);
+      }
+    }
+  }
+
+  // フォールバックスクリーンショット保存機能
+  _fallbackImageSave(blob, filename) {
+    try {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      console.log('スクリーンショットがダウンロードされました:', filename);
+    } catch (error) {
+      console.error('フォールバックスクリーンショット保存エラー:', error);
+      alert('スクリーンショットの保存に失敗しました');
+    }
   }
 }
