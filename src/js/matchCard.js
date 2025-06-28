@@ -305,7 +305,7 @@ class MatchCard {
         tbWrapper.style.marginLeft = '2px';
         const tbOpen = document.createElement('span'); tbOpen.textContent='('; tbOpen.style.fontSize='0.8em';
         const tbInput = document.createElement('input');
-        tbInput.type='number'; tbInput.min='0'; tbInput.max='99'; tbInput.dataset.tiebreak='A'; tbInput.dataset.set=i; tbInput.style.width='24px'; tbInput.style.fontSize='0.7em';
+        tbInput.type='number'; tbInput.min='0'; tbInput.max='99'; tbInput.dataset.tiebreak='A'; tbInput.dataset.set=i; tbInput.style.width='40px'; tbInput.style.fontSize='0.7em';
         const tbClose = document.createElement('span'); tbClose.textContent=')'; tbClose.style.fontSize='0.8em';
         tbWrapper.appendChild(tbOpen);
         tbWrapper.appendChild(tbInput);
@@ -333,11 +333,12 @@ class MatchCard {
       tiebreakInputA.max = '99';
       tiebreakInputA.className = 'tiebreak-score-input';
       tiebreakInputA.dataset.tiebreak = 'A';
-      tiebreakInputA.style.width = '30px';
-      tiebreakInputA.style.height = '20px';
-      tiebreakInputA.style.fontSize = '0.8em';
-      tiebreakInputA.style.padding = '0 2px';
+      tiebreakInputA.style.width = '40px'; // 幅を調整し2桁数字に対応
+      tiebreakInputA.style.height = '20px'; // 高さを小さく
+      tiebreakInputA.style.fontSize = '0.8em'; // フォントサイズを小さく
+      tiebreakInputA.style.padding = '0 2px'; // パディングを小さく
       tiebreakInputA.placeholder = 'TB';
+      // 既存のタイブレークスコア値を設定
       tiebreakInputA.value = this.match.tieBreakA || '';
 
       const tbOpenParenA = document.createElement('span'); tbOpenParenA.textContent='('; tbOpenParenA.style.fontSize='0.8em';
@@ -404,7 +405,7 @@ class MatchCard {
       tiebreakInputA.max = '99';
       tiebreakInputA.className = 'tiebreak-score-input';
       tiebreakInputA.dataset.tiebreak = 'A'; // data-tiebreak属性を追加
-      tiebreakInputA.style.width = '30px'; // 幅を小さく
+      tiebreakInputA.style.width = '40px'; // 幅を調整し2桁数字に対応
       tiebreakInputA.style.height = '20px'; // 高さを小さく
       tiebreakInputA.style.fontSize = '0.8em'; // フォントサイズを小さく
       tiebreakInputA.style.padding = '0 2px'; // パディングを小さく
@@ -684,7 +685,7 @@ class MatchCard {
         wrapper.style.display = 'inline-block'; // 個別初期非表示
         const open = document.createElement('span'); open.textContent='('; open.style.fontSize='0.8em';
         const input = document.createElement('input');
-        input.type='number'; input.min='0'; input.max='99'; input.dataset.tiebreak='A'; input.dataset.set=i; input.style.width='30px'; input.style.fontSize='0.8em'; input.placeholder='TB';
+        input.type='number'; input.min='0'; input.max='99'; input.dataset.tiebreak='A'; input.dataset.set=i; input.style.width='40px'; input.style.fontSize='0.8em'; input.placeholder='TB';
         const close = document.createElement('span'); close.textContent=')'; close.style.fontSize='0.8em';
         wrapper.appendChild(open); wrapper.appendChild(input); wrapper.appendChild(close);
         tiebreakRow.appendChild(wrapper);

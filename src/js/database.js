@@ -192,7 +192,11 @@ class TennisMatchDatabase {
 
   // Get completed matches (for history view)
   async getCompletedMatches() {
-    return this.matches.filter(match => match.winner);
+    return this.matches.filter(match => 
+      match.winner && 
+      match.actualEndTime && 
+      (match.status === 'Completed' || match.status === 'Finished')
+    );
   }
   
   // Clear all completed matches from history

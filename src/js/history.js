@@ -146,7 +146,7 @@ class History {
   // 履歴用のマッチカードを作成
   createHistoryMatchCard(match, sequenceNumber) {
     const card = document.createElement('div');
-    card.className = 'match-card';
+    card.className = 'match-card history-match-card';
     card.dataset.matchId = match.id;
     
     // カード上部（リーグ名とメモ）
@@ -235,10 +235,19 @@ class History {
     
     // 右側のスコアとチェックマークのコンテナ
     const scoreWinContainerA = document.createElement('div');
+    scoreWinContainerA.className = 'score-win-container';
     scoreWinContainerA.style.display = 'flex';
     scoreWinContainerA.style.alignItems = 'center';
     scoreWinContainerA.style.gap = '5px';
     scoreWinContainerA.style.marginLeft = 'auto';
+    
+    // Winラベル
+    if (match.winner === 'A') {
+      const winALabel = document.createElement('div');
+      winALabel.className = 'win-label';
+      winALabel.textContent = '✓'; // チェックマーク
+      scoreWinContainerA.appendChild(winALabel);
+    }
     
     // スコア表示用コンテナ
     const scoreContainerA = document.createElement('div');
@@ -257,13 +266,13 @@ class History {
         
         // 各セットのスコアを表示
         for (let i = 0; i < match.setScores.A.length; i++) {
-          if (match.setScores.A[i] > 0) { // スコアがある場合のみ表示
+          if (match.setScores.A[i] !== null && match.setScores.A[i] !== undefined) { // 0も含めて表示
             const setScore = document.createElement('input');
             setScore.type = 'number';
             setScore.className = 'set-score-input';
             setScore.value = match.setScores.A[i];
             setScore.readOnly = true;
-            setScore.style.width = '20px';
+            setScore.style.width = '40px';
             setScore.style.textAlign = 'center';
             setScoresDisplayA.appendChild(setScore);
           }
@@ -291,22 +300,7 @@ class History {
       scoreContainerA.appendChild(scoreA);
     }
     
-
-    
     scoreWinContainerA.appendChild(scoreContainerA);
-    
-    // Winラベル
-    if (match.winner === 'A') {
-      const winALabel = document.createElement('div');
-      winALabel.className = 'win-label';
-      winALabel.textContent = '✓'; // チェックマーク
-      winALabel.style.color = 'green';
-      winALabel.style.fontWeight = 'bold';
-      winALabel.style.fontSize = '1.2em';
-      winALabel.style.marginLeft = '5px';
-      winALabel.style.marginRight = '5px';
-      scoreWinContainerA.prepend(winALabel);
-    }
     
     playerInfoA.appendChild(scoreWinContainerA);
     playerADiv.appendChild(playerInfoA);
@@ -336,10 +330,19 @@ class History {
     
     // 右側のスコアとチェックマークのコンテナ
     const scoreWinContainerB = document.createElement('div');
+    scoreWinContainerB.className = 'score-win-container';
     scoreWinContainerB.style.display = 'flex';
     scoreWinContainerB.style.alignItems = 'center';
     scoreWinContainerB.style.gap = '5px';
     scoreWinContainerB.style.marginLeft = 'auto';
+    
+    // Winラベル
+    if (match.winner === 'B') {
+      const winBLabel = document.createElement('div');
+      winBLabel.className = 'win-label';
+      winBLabel.textContent = '✓'; // チェックマーク
+      scoreWinContainerB.appendChild(winBLabel);
+    }
     
     // スコア表示用コンテナ
     const scoreContainerB = document.createElement('div');
@@ -359,13 +362,13 @@ class History {
         
         // 各セットのスコアを表示
         for (let i = 0; i < match.setScores.B.length; i++) {
-          if (match.setScores.B[i] > 0) { // スコアがある場合のみ表示
+          if (match.setScores.B[i] !== null && match.setScores.B[i] !== undefined) { // 0も含めて表示
             const setScore = document.createElement('input');
             setScore.type = 'number';
             setScore.className = 'set-score-input';
             setScore.value = match.setScores.B[i];
             setScore.readOnly = true;
-            setScore.style.width = '20px';
+            setScore.style.width = '40px';
             setScore.style.textAlign = 'center';
             setScoresDisplayB.appendChild(setScore);
           }
@@ -393,24 +396,7 @@ class History {
       scoreContainerB.appendChild(scoreB);
     }
     
-
-    
-    scoreWinContainerB.style.justifyContent = 'flex-end';
-scoreWinContainerB.style.flexDirection = 'row-reverse';
-scoreWinContainerB.appendChild(scoreContainerB);
-    
-    // Winラベル
-    if (match.winner === 'B') {
-      const winBLabel = document.createElement('div');
-      winBLabel.className = 'win-label';
-      winBLabel.textContent = '✓'; // チェックマーク
-      winBLabel.style.color = 'green';
-      winBLabel.style.fontWeight = 'bold';
-      winBLabel.style.fontSize = '1.2em';
-      winBLabel.style.marginLeft = '5px';
-      winBLabel.style.marginRight = '5px';
-      scoreWinContainerB.prepend(winBLabel);
-    }
+    scoreWinContainerB.appendChild(scoreContainerB);
     
     playerInfoB.appendChild(scoreWinContainerB);
     playerBDiv.appendChild(playerInfoB);
@@ -432,7 +418,7 @@ scoreWinContainerB.appendChild(scoreContainerB);
       const tbInput = document.createElement('input');
       tbInput.className = 'tiebreak-input';
       tbInput.readOnly = true;
-      tbInput.style.width = '30px';
+      tbInput.style.width = '40px'; // 30px → 40px に変更
       tbInput.style.textAlign = 'center';
       tbInput.value = value || '';
       tiebreakRow.appendChild(tbInput);
