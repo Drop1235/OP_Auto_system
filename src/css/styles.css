@@ -585,6 +585,21 @@ th:hover {
   border: 1px solid #ccc;
   border-radius: 3px;
   box-sizing: border-box; /* paddingとborderをwidthに含める */
+  pointer-events: auto !important; /* クリックを確実に有効に */
+  cursor: text !important; /* テキスト入力カーソルを表示 */
+  user-select: text; /* テキスト選択を有効に */
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+.tiebreak-score-input:focus {
+  outline: 2px solid #007bff; /* フォーカス時のアウトライン */
+  border-color: #007bff;
+}
+
+.tiebreak-score-input:hover {
+  border-color: #999; /* ホバー時のボーダー色 */
 }
 
 /* Match Card Header adjustments if needed */

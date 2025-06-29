@@ -900,41 +900,132 @@ class History {
   }
 
   // スクリーンショットをエクスポート
-  exportScreenshot() {
-    // Electron APIを使ってスクリーンショットを撮影
-    if (window.api && window.api.takeScreenshot) {
-      try {
-        // 要素を非表示にしてからスクリーンショットを撮影
-        const exportContainer = document.querySelector('.export-group');
-        const tempStyle = exportContainer ? exportContainer.style.display : null;
-        if (exportContainer) {
-          exportContainer.style.display = 'none';
-        }
-        
-        // スクリーンショットの前に少し待つ
-        setTimeout(async () => {
-          try {
-            // Electronのプリロードスクリプト経由でスクリーンショット撮影
-            await window.api.takeScreenshot(`テニス試合記録_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '-')}.png`);
-            alert('スクリーンショットを保存しました');
-          } catch (error) {
-            console.error('スクリーンショット撮影エラー:', error);
-            alert('スクリーンショットの撮影に失敗しました');
-          } finally {
-            // 非表示にした要素を元に戻す
-            if (exportContainer && tempStyle !== null) {
-              exportContainer.style.display = tempStyle;
-            }
-          }
-        }, 100);
-      } catch (error) {
-        console.error('スクリーンショット処理エラー:', error);
-        alert('スクリーンショット機能でエラーが発生しました');
+  async exportScreenshot() {
+    try {
+      console.log('[HISTORY] スクリーンショット機能開始');
+      
+      // html2canvasライブラリの確認
+      if (typeof html2canvas === 'undefined') {
+        console.error('[HISTORY] html2canvas is undefined');
+        alert('スクリーンショット機能に必要なライブラリが読み込まれていません。\nページを再読み込みしてから再度お試しください。');
+        return;
       }
-    } else {
-      // Electron APIが利用できない場合はエラーメッセージ
-      alert('この機能はデスクトップアプリでのみ利用可能です');
-      console.warn('スクリーンショットAPIが見つかりません');
+      
+      console.log('[HISTORY] html2canvas is available');
+      
+      // 試合履歴のコンテナをキャプチャ
+      const historyElement = document.getElementById('history-view');
+      if (!historyElement) {
+        console.error('[HISTORY] history-view element not found');
+        alert('試合履歴が見つかりません');
+        return;
+      }
+      
+      console.log('[HISTORY] History element found:', historyElement);
+      
+      // エクスポートボタンを一時的に非表示
+      const exportContainer = document.querySelector('.export-group');
+      const tempStyle = exportContainer ? exportContainer.style.display : null;
+      if (exportContainer) {
+        exportContainer.style.display = 'none';
+      }
+      
+      // スクリーンショット作成中のメッセージを表示
+      const screenshotBtn = document.querySelector('select[onchange*="exportScreenshot"]');
+      let originalDisabled = false;
+      if (screenshotBtn) {
+        originalDisabled = screenshotBtn.disabled;
+        screenshotBtn.disabled = true;
+      }
+      
+      console.log('[HISTORY] スクリーンショット作成開始');
+      
+      const canvas = await html2canvas(historyElement, {
+        backgroundColor: '#ffffff',
+        scale: 1,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        width: historyElement.scrollWidth,
+        height: historyElement.scrollHeight,
+        scrollX: 0,
+        scrollY: 0
+      });
+      
+      console.log('[HISTORY] スクリーンショット作成完了');
+      
+      // ファイル名を生成
+      const defaultFilename = `試合履歴_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '-')}.png`;
+      
+      // CanvasをBlobに変換
+      canvas.toBlob(async (blob) => {
+        try {
+          if (window.api && window.api.saveImageFile) {
+            try {
+              // BlobをArrayBufferに変換
+              const arrayBuffer = await blob.arrayBuffer();
+              const uint8Array = new Uint8Array(arrayBuffer);
+              
+              const result = await window.api.saveImageFile(uint8Array, defaultFilename);
+              if (result.success) {
+                console.log('[HISTORY] スクリーンショットが保存されました:', result.path);
+                alert('スクリーンショットが保存されました');
+              } else if (result.canceled) {
+                console.log('[HISTORY] スクリーンショット保存がキャンセルされました');
+              } else {
+                console.error('[HISTORY] スクリーンショット保存エラー:', result.error);
+                alert('スクリーンショットの保存に失敗しました: ' + result.error);
+              }
+            } catch (error) {
+              console.error('[HISTORY] スクリーンショット保存APIエラー:', error);
+              this._fallbackImageSave(blob, defaultFilename);
+            }
+          } else {
+            console.warn('[HISTORY] ネイティブのスクリーンショット保存APIが利用できないため、ブラウザの保存機能を使用します');
+            this._fallbackImageSave(blob, defaultFilename);
+          }
+        } finally {
+          // 非表示にした要素を元に戻す
+          if (exportContainer && tempStyle !== null) {
+            exportContainer.style.display = tempStyle;
+          }
+          
+          // ボタンを元に戻す
+          if (screenshotBtn) {
+            screenshotBtn.disabled = originalDisabled;
+          }
+        }
+      }, 'image/png');
+      
+    } catch (error) {
+      console.error('[HISTORY] スクリーンショットエクスポートエラー:', error);
+      alert('スクリーンショットの作成中にエラーが発生しました: ' + error.message);
+      
+      // エラー時も要素を元に戻す
+      const exportContainer = document.querySelector('.export-group');
+      if (exportContainer) {
+        exportContainer.style.display = '';
+      }
+    }
+  }
+  
+  // フォールバックスクリーンショット保存機能
+  _fallbackImageSave(blob, filename) {
+    try {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      console.log('[HISTORY] スクリーンショットがダウンロードされました:', filename);
+      alert('スクリーンショットがダウンロードされました');
+    } catch (error) {
+      console.error('[HISTORY] フォールバックスクリーンショット保存エラー:', error);
+      alert('スクリーンショットの保存に失敗しました');
     }
   }
   

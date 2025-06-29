@@ -409,7 +409,10 @@ class MatchCard {
       tiebreakInputA.style.height = '20px'; // 高さを小さく
       tiebreakInputA.style.fontSize = '0.8em'; // フォントサイズを小さく
       tiebreakInputA.style.padding = '0 2px'; // パディングを小さく
+      tiebreakInputA.style.pointerEvents = 'auto'; // クリック可能にする
+      tiebreakInputA.style.cursor = 'text'; // テキスト入力カーソルを表示
       tiebreakInputA.placeholder = 'TB';
+      tiebreakInputA.tabIndex = 0; // タブフォーカス可能にする
       // 既存のタイブレークスコア値を設定
       tiebreakInputA.value = this.match.tieBreakA || '';
       
@@ -435,6 +438,19 @@ class MatchCard {
       });
       
       tiebreakInputA.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // フォーカスを確実に当てる
+        e.target.focus();
+      });
+      
+      // フォーカスイベントを追加
+      tiebreakInputA.addEventListener('focus', (e) => {
+        console.log('[MATCH_CARD] タイブレーク入力欄にフォーカス');
+        e.target.select(); // フォーカス時にテキストを選択
+      });
+      
+      // マウスダウンイベントを追加
+      tiebreakInputA.addEventListener('mousedown', (e) => {
         e.stopPropagation();
       });
       
@@ -810,7 +826,15 @@ class MatchCard {
           if (show) {
             const stored = Array.isArray(this.match.tieBreakA) ? this.match.tieBreakA[idx] : '';
             if (this.tiebreakInputs && this.tiebreakInputs[idx]) {
-              this.tiebreakInputs[idx].value = stored != null ? stored : '';
+              const input = this.tiebreakInputs[idx];
+              input.value = stored != null ? stored : '';
+              // 入力フィールドをアクティブにする
+              input.disabled = false;
+              input.readOnly = false;
+              input.style.pointerEvents = 'auto';
+              input.style.cursor = 'text';
+              input.tabIndex = 0;
+              console.log('[MATCH_CARD] タイブレーク入力欄をアクティブ化:', idx);
             }
           }
         });
@@ -818,9 +842,21 @@ class MatchCard {
 
       // 行全体を表示して、B 側入力欄は常に非表示
       // 1set 形式では先頭ラッパーのみ表示し、他は非表示
-      if (format.includes('1set') && this.tiebreakWrappers && this.tiebreakWrappers.length) {
-        this.tiebreakWrappers.forEach((w, idx) => w.style.display = idx === 0 ? 'inline-block' : 'none');
-      }
+    if (format.includes('1set') && this.tiebreakWrappers && this.tiebreakWrappers.length) {
+      this.tiebreakWrappers.forEach((w, idx) => {
+        w.style.display = idx === 0 ? 'inline-block' : 'none';
+        // 先頭ラッパーの入力フィールドをアクティブ化
+        if (idx === 0 && this.tiebreakInputs && this.tiebreakInputs[idx]) {
+          const input = this.tiebreakInputs[idx];
+          input.disabled = false;
+          input.readOnly = false;
+          input.style.pointerEvents = 'auto';
+          input.style.cursor = 'text';
+          input.tabIndex = 0;
+          console.log('[MATCH_CARD] 1セット形式タイブレーク入力欄をアクティブ化');
+        }
+      });
+    }
       // ラッパーのいずれかが表示されているか確認し、行全体を切り替え
       const anyVisible = this.tiebreakWrappers && Array.from(this.tiebreakWrappers).some(w => w.style.display !== 'none');
       if (this.tiebreakRow) this.tiebreakRow.style.display = anyVisible ? 'flex' : 'none';
