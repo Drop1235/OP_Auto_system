@@ -784,7 +784,7 @@ class History {
         let scoreText = 'N/A';
         console.log('History Match data for court', courtNumber, ':', match); // デバッグ用
         
-        // setScoresの構造を確認
+        // setScoresの構造を確認（3set形式用）
         if (match.setScores) {
           console.log('History setScores structure:', match.setScores); // デバッグ用
           
@@ -824,6 +824,24 @@ class History {
           
           if (scoreParts.length > 0) {
             scoreText = `"${scoreParts.join(' ')}"`;
+          }
+        } else if (match.scoreA !== undefined && match.scoreB !== undefined) {
+          // setScoresがない場合（5game、4game2set、6game2setなど）
+          console.log('Using scoreA/scoreB for non-3set format:', match.scoreA, match.scoreB);
+          
+          const scoreA = match.scoreA !== null && match.scoreA !== undefined ? match.scoreA : '';
+          const scoreB = match.scoreB !== null && match.scoreB !== undefined ? match.scoreB : '';
+          
+          if (scoreA !== '' || scoreB !== '') {
+            let mainScore = `${scoreA}-${scoreB}`;
+            
+            // タイブレークスコアがある場合は追加
+            if (match.tieBreakA !== undefined && match.tieBreakA !== null && match.tieBreakA !== '' &&
+                match.tieBreakB !== undefined && match.tieBreakB !== null && match.tieBreakB !== '') {
+              mainScore += `(${match.tieBreakA}-${match.tieBreakB})`;
+            }
+            
+            scoreText = `"${mainScore}"`;
           }
         }
         

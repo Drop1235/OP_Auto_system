@@ -1097,6 +1097,9 @@ async checkLeagueWinCondition() {
     // BO3形式（4G/6G 2set・3set 等）のみ判定
     const bo3Formats = ['4game3set', '6game3set', '4game2set', '6game2set'];
     if (bo3Formats.includes(this.match.gameFormat)) {
+      // まずcalculateTotalScoreを呼び出してセットスコアから合計スコアを計算
+      this.calculateTotalScore();
+      
       const setA = (this.match.setScores && Array.isArray(this.match.setScores.A)) ? this.match.setScores.A : [];
       const setB = (this.match.setScores && Array.isArray(this.match.setScores.B)) ? this.match.setScores.B : [];
       let winsA = 0;
@@ -1115,20 +1118,54 @@ async checkLeagueWinCondition() {
             else if (sB > sA) winsB++;
           }
         } else {
-          // 通常セットの勝者判定
-          if (sA > sB) winsA++;
-          else if (sB > sA) winsB++;
+          // 通常セットの勝者判定 - 6G3setの場合は6ゲーム以上で2ゲーム差、または7-6の場合
+          if (this.match.gameFormat === '6game3set') {
+            // 6ゲーム先取、2ゲーム差必要、ただし7-6は勝利
+            if ((sA >= 6 && sA - sB >= 2) || (sA === 7 && sB === 6)) {
+              winsA++;
+            } else if ((sB >= 6 && sB - sA >= 2) || (sB === 7 && sA === 6)) {
+              winsB++;
+            }
+          } else if (this.match.gameFormat === '4game3set') {
+            // 4ゲーム先取、2ゲーム差必要、ただし5-4は勝利
+            if ((sA >= 4 && sA - sB >= 2) || (sA === 5 && sB === 4)) {
+              winsA++;
+            } else if ((sB >= 4 && sB - sA >= 2) || (sB === 5 && sA === 4)) {
+              winsB++;
+            }
+          } else {
+            // その他の形式は単純比較
+            if (sA > sB) winsA++;
+            else if (sB > sA) winsB++;
+          }
         }
       }
+      
       let newWinner = null;
       let newStatus = this.match.status;
-      if (winsA >= 2) {
-        newWinner = 'A';
-        newStatus = 'Win';
-      } else if (winsB >= 2) {
-        newWinner = 'B';
-        newStatus = 'Win';
+      
+      // 3セット制の場合は2セット先取で勝利
+      if (this.match.gameFormat === '6game3set' || this.match.gameFormat === '4game3set') {
+        if (winsA >= 2) {
+          newWinner = 'A';
+          newStatus = 'Win';
+        } else if (winsB >= 2) {
+          newWinner = 'B';
+          newStatus = 'Win';
+        }
+      } else if (this.match.gameFormat === '6game2set' || this.match.gameFormat === '4game2set') {
+        // 2セット制の場合も2セット先取で勝利（3セット目はマッチタイブレーク）
+        if (winsA >= 2) {
+          newWinner = 'A';
+          newStatus = 'Win';
+        } else if (winsB >= 2) {
+          newWinner = 'B';
+          newStatus = 'Win';
+        }
       }
+      
+      showDebug('[DEBUG] BO3 - winsA: ' + winsA + ', winsB: ' + winsB + ', newWinner: ' + newWinner);
+      
       // winner / status 更新判定
       if (this.match.winner !== newWinner || this.match.status !== newStatus) {
         const updatePayload = { winner: newWinner, status: newStatus };
