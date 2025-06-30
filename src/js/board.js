@@ -905,7 +905,35 @@ class Board {
       // 全てのマッチカードからデータを収集
       const allMatches = [];
       this.matchCards.forEach((matchCard, matchId) => {
-        allMatches.push(matchCard.match);
+        // マッチカードインスタンスから最新のスコアデータを取得
+        const matchData = { ...matchCard.match };
+        
+        // マッチカードから最新のスコアを取得
+        try {
+          const currentScoreA = matchCard.getScoreA();
+          const currentScoreB = matchCard.getScoreB();
+          const currentSetScores = matchCard.getSetScores();
+          const currentTiebreakScores = matchCard.getTiebreakScore();
+          
+          // 最新のスコアデータで更新
+          if (currentScoreA !== undefined && currentScoreA !== null) {
+            matchData.scoreA = currentScoreA;
+          }
+          if (currentScoreB !== undefined && currentScoreB !== null) {
+            matchData.scoreB = currentScoreB;
+          }
+          if (currentSetScores && (currentSetScores.A.length > 0 || currentSetScores.B.length > 0)) {
+            matchData.setScores = currentSetScores;
+          }
+          if (currentTiebreakScores) {
+            matchData.tieBreakA = currentTiebreakScores.A;
+            matchData.tieBreakB = currentTiebreakScores.B;
+          }
+        } catch (error) {
+          console.warn('マッチカードからスコア取得エラー:', error);
+        }
+        
+        allMatches.push(matchData);
       });
       
       if (allMatches.length === 0) {
@@ -920,7 +948,7 @@ class Board {
         return courtA - courtB;
       });
       
-      // CSVヘッダー作成（実際終了時刻を追加）
+      // CSVヘッダー作成
       let csvContent = 'コート,プレイヤーA,プレイヤーB,スコア,実際終了時刻,勝者\n';
       
       // 各マッチを行として追加
@@ -931,20 +959,28 @@ class Board {
         
         // スコア情報を構築
         let scoreText = 'N/A';
-        console.log('Match data for court', courtNumber, ':', match); // デバッグ用
+        console.log('Match data for court', courtNumber, ':', {
+          scoreA: match.scoreA,
+          scoreB: match.scoreB,
+          setScores: match.setScores,
+          gameFormat: match.gameFormat
+        }); // デバッグ用
         
-        // setScoresの構造を確認
-        if (match.setScores) {
-          console.log('setScores structure:', match.setScores); // デバッグ用
+        // 試合形式を確認
+        const gameFormat = (match.gameFormat || '').toLowerCase();
+        const isMultiSet = gameFormat.includes('2set') || gameFormat.includes('3set');
+        
+        if (isMultiSet && match.setScores) {
+          // マルチセット形式の場合
+          console.log('Multi-set format detected, setScores:', match.setScores);
           
-          // setScoresが配列の場合とオブジェクトの場合を両方対応
           let scoresA, scoresB;
           if (Array.isArray(match.setScores)) {
             // 配列形式の場合（古い形式）
             scoresA = match.setScores;
             scoresB = match.setScoresB || [];
           } else if (match.setScores.A && match.setScores.B) {
-            // オブジェクト形式の場合
+            // オブジェクト形式の場合（現在の形式）
             scoresA = match.setScores.A;
             scoresB = match.setScores.B;
           } else {
@@ -957,24 +993,43 @@ class Board {
           const maxSets = Math.max(scoresA ? scoresA.length : 0, scoresB ? scoresB.length : 0);
           
           for (let i = 0; i < maxSets; i++) {
-            const scoreA = scoresA && scoresA[i] !== undefined && scoresA[i] !== null ? scoresA[i] : '';
-            const scoreB = scoresB && scoresB[i] !== undefined && scoresB[i] !== null ? scoresB[i] : '';
+            const scoreA = scoresA && scoresA[i] !== undefined && scoresA[i] !== null && scoresA[i] !== '' ? scoresA[i] : '';
+            const scoreB = scoresB && scoresB[i] !== undefined && scoresB[i] !== null && scoresB[i] !== '' ? scoresB[i] : '';
             
             if (scoreA !== '' || scoreB !== '') {
               let setScore = `${scoreA}-${scoreB}`;
               
               // タイブレークスコアがある場合は追加
-              if (match.tieBreakA && match.tieBreakA[i] !== undefined && match.tieBreakA[i] !== null && match.tieBreakA[i] !== '') {
-                setScore += `(${match.tieBreakA[i]})`;
+              if (match.tieBreakA && match.tieBreakA !== '' && !isNaN(match.tieBreakA)) {
+                setScore += `(${match.tieBreakA})`;
               }
               scoreParts.push(setScore);
             }
           }
           
           if (scoreParts.length > 0) {
-            scoreText = `"${scoreParts.join(' ')}"`;
+            scoreText = `"='${scoreParts.join(' ')}"`;
+          }
+        } else {
+          // シングルゲーム形式の場合（5game、4game1set等）
+          console.log('Single game format detected, scoreA:', match.scoreA, 'scoreB:', match.scoreB);
+          
+          const scoreA = match.scoreA !== undefined && match.scoreA !== null && match.scoreA !== '' ? match.scoreA : '';
+          const scoreB = match.scoreB !== undefined && match.scoreB !== null && match.scoreB !== '' ? match.scoreB : '';
+          
+          if (scoreA !== '' || scoreB !== '') {
+            let gameScore = `${scoreA}-${scoreB}`;
+            
+            // タイブレークスコアがある場合は追加
+            if (match.tieBreakA && match.tieBreakA !== '' && !isNaN(match.tieBreakA)) {
+              gameScore += `(${match.tieBreakA})`;
+            }
+            
+            scoreText = `"='${gameScore}"`;
           }
         }
+        
+        console.log('Final score text for court', courtNumber, ':', scoreText);
         
         // 実際終了時刻を取得
         const actualEnd = match.actualEndTime ? new Date(match.actualEndTime).toLocaleString('ja-JP') : 'N/A';
