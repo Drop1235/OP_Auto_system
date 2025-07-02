@@ -1,7 +1,7 @@
 // Board Component for managing the court grid
 class Board {
   constructor(numberOfCourts = 12) {
-    console.log('[BOARD] Constructor called');
+    console.log('[BOARD] Constructor called (ver 20250702-2)');
     this.numberOfCourts = numberOfCourts;
     this.courtGrid = document.getElementById('court-grid');
     this.matchCards = new Map(); // Map to store match card instances by ID
@@ -119,6 +119,29 @@ class Board {
       }
     });
     
+    // Attach identical drag events to the inner card container so that
+    // dropping on empty areas inside the row (inside .card-container) works too.
+    [row, cardContainer].forEach(targetEl => {
+      // Skip re-attaching for the row (already attached) on first iteration
+      if (targetEl !== row) {
+        targetEl.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          const rowElem = targetEl.classList.contains('court-row') ? targetEl : targetEl.closest('.court-row');
+          if (rowElem) {
+            rowElem.classList.add('row-highlight');
+          }
+        });
+
+        targetEl.addEventListener('dragleave', (e) => {
+          const rowElem = targetEl.classList.contains('court-row') ? targetEl : targetEl.closest('.court-row');
+          if (rowElem) {
+            rowElem.classList.remove('row-highlight');
+          }
+        });
+      }
+    });
+
     row.addEventListener('drop', async (e) => {
       e.preventDefault();
       
@@ -127,9 +150,10 @@ class Board {
         row.classList.remove('row-highlight');
       });
       
-      // Get the match ID from the dragged card
-      const matchId = parseInt(e.dataTransfer.getData('text/plain'));
-      if (!matchId) return;
+      // Get the match ID (may be numeric or Firestore string ID)
+      const matchIdRaw = e.dataTransfer.getData('text/plain');
+      if (!matchIdRaw) return;
+      const matchId = matchIdRaw; // keep as string for lookup comparison
       
       // Get the target court row
       let targetRow = null;
@@ -147,7 +171,8 @@ class Board {
       const rowType = targetRow.dataset.rowType;
       
       // Get the source court and row
-      const sourceCourtNumber = parseInt(e.dataTransfer.getData('source-court')) || null;
+      const sourceCourtRaw = e.dataTransfer.getData('source-court');
+      const sourceCourtNumber = sourceCourtRaw ? parseInt(sourceCourtRaw, 10) : null;
       const sourceRowType = e.dataTransfer.getData('source-row') || null;
       
       try {
@@ -183,15 +208,33 @@ class Board {
           actualEndTime = new Date().toISOString();
         }
         
-        // Update the match in the database
-        const updatedMatch = await db.updateMatch({
-          id: matchId,
+        // Update the match in the database - 元のマッチデータをベースにして更新
+        const updatePayload = {
+          ...match, // 元のマッチデータをすべて含める
+          id: match.id,
           courtNumber,
           rowPosition: rowType,
           status: newStatus,
-          actualStartTime,
-          actualEndTime
-        });
+          actualStartTime: actualStartTime !== undefined ? actualStartTime : null,
+          actualEndTime: actualEndTime !== undefined ? actualEndTime : null
+        };
+
+        // -------------------------
+        // Fallback: shallow cleanup
+        // -------------------------
+        const shallowClean = (obj) => {
+          Object.keys(obj).forEach((key) => {
+            if (obj[key] === undefined) {
+              delete obj[key];
+            }
+          });
+          return obj;
+        };
+        
+        // 深い除去が可能ならそれを使い、なければ浅い除去を行う
+        const cleanedPayload = typeof removeUndefinedDeep === 'function' ? removeUndefinedDeep(updatePayload) : shallowClean(updatePayload);
+        console.log('[BOARD] Cleaned payload for update:', JSON.stringify(cleanedPayload));
+        const updatedMatch = await db.updateMatch(cleanedPayload);
         
         // Dispatch an event to notify the board to update
         const updateEvent = new CustomEvent('match-updated', {
@@ -669,13 +712,18 @@ class Board {
           return;
         }
         
-        // 試合のステータスを未割当に更新
-        const updatedMatch = await db.updateMatch({
-          id: matchId,
+        // 試合のステータスを未割当に更新 - 元のマッチデータをベースにして更新
+        const updatePayload = {
+          ...match, // 元のマッチデータをすべて含める
+          id: match.id,
           courtNumber: null,
           rowPosition: null,
-          status: 'Unassigned'
-        });
+          status: 'Unassigned',
+          actualStartTime: match.actualStartTime !== undefined ? match.actualStartTime : null,
+          actualEndTime: match.actualEndTime !== undefined ? match.actualEndTime : null
+        };
+        
+        const updatedMatch = await db.updateMatch(updatePayload);
         
         // ボードに更新を通知するイベントを発行
         const updateEvent = new CustomEvent('match-updated', {

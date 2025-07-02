@@ -991,7 +991,20 @@ async updateMatchData(updatedData) {
     this.match = { ...this.match, ...updatedData };
     if (window.db && typeof window.db.updateMatch === 'function') {
       try {
-        await window.db.updateMatch({ id: this.match.id, ...this.match });
+        // Firestoreに送信する前にundefined値を除去
+        const matchData = { id: this.match.id, ...this.match };
+        console.log('Updating match from card:', JSON.stringify(matchData));
+        
+        // actualStartTimeとactualEndTimeが明示的にnullまたはundefinedの場合は削除
+        if (matchData.actualStartTime === undefined || matchData.actualStartTime === null) {
+          delete matchData.actualStartTime;
+        }
+        
+        if (matchData.actualEndTime === undefined || matchData.actualEndTime === null) {
+          delete matchData.actualEndTime;
+        }
+        
+        await window.db.updateMatch(matchData);
       } catch (error) {
         console.error('Failed to update match in DB:', error);
       }
@@ -1396,15 +1409,66 @@ async checkLeagueWinCondition() {
 } // End of checkLeagueWinCondition
 
 setupDragAndDrop() {
+    // 親カード要素のドラッグイベント
     this.element.addEventListener('dragstart', (e) => {
+      // 常にドラッグを許可（スコアや勝敗に関係なく）
       e.dataTransfer.setData('text/plain', this.match.id);
       e.dataTransfer.effectAllowed = 'move';
+
+      // 元のコート/行情報を保存（ドロップ処理用）
+      const originRow = this.element.closest('.court-row');
+      if (originRow) {
+        const originSlot = originRow.closest('.court-slot');
+        if (originSlot) {
+          e.dataTransfer.setData('source-court', originSlot.dataset.courtNumber || '');
+        }
+        e.dataTransfer.setData('source-row', originRow.dataset.rowType || '');
+      }
+
       this.element.classList.add('dragging');
     });
     this.element.addEventListener('dragend', () => {
       this.element.classList.remove('dragging');
     });
-}
+
+    // -----------------------------
+    // 子要素（入力欄など）からのドラッグも許可する
+    // -----------------------------
+    const delegateDragStart = (e) => {
+      // 親要素に dragstart が既に設定されているので、同じ処理を呼び出すだけ
+      // stopPropagation しても親側 dragstart は発火しないため、ここで同等の処理を実行する
+      e.stopPropagation();
+      // 必ず move として設定
+      e.dataTransfer.setData('text/plain', this.match.id);
+      e.dataTransfer.effectAllowed = 'move';
+
+      const originRow = this.element.closest('.court-row');
+      if (originRow) {
+        const originSlot = originRow.closest('.court-slot');
+        if (originSlot) {
+          e.dataTransfer.setData('source-court', originSlot.dataset.courtNumber || '');
+        }
+        e.dataTransfer.setData('source-row', originRow.dataset.rowType || '');
+      }
+
+      this.element.classList.add('dragging');
+    };
+
+    const delegateDragEnd = () => {
+      this.element.classList.remove('dragging');
+    };
+
+    // score input, tiebreak input などフォーカス可能な要素に対して適用
+    this.element.querySelectorAll('input, textarea, select').forEach((el) => {
+      // 入力要素自体にもドラッグを許可
+      el.setAttribute('draggable', 'true');
+      // 既にリスナーがついている場合の重複を避ける
+      el.removeEventListener('dragstart', delegateDragStart);
+      el.removeEventListener('dragend', delegateDragEnd);
+      el.addEventListener('dragstart', delegateDragStart);
+      el.addEventListener('dragend', delegateDragEnd);
+    });
+  }
 
 async moveToHistory() {
     // Placeholder for actual implementation

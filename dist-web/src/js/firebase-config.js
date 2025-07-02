@@ -16,8 +16,6 @@ if (!window.firebase || !window.firebase.apps || !window.firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
 
-// Initialize Firestore (Auth は後で追加)
+// Initialize Firestore and Auth
 window.firestore = firebase.firestore();
-// window.firebaseAuth = firebase.auth();  // 認証は後で追加  // 未使用なのでコメントアウト
-
-// これはデプロイテスト用のコメントです
+// window.firebaseAuth = firebase.auth();  // 認証は後で追加
