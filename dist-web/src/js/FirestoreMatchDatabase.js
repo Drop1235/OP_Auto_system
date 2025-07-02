@@ -21,13 +21,17 @@ class FirestoreMatchDatabase {
 
   // Firestoreに新しい試合を追加
   async addMatch(match) {
-    await this.collection.add(match);
+    // Firestore の add は DocumentReference を返す。呼び出し側で ID を必要とするため返却値を整形する。
+    const docRef = await this.collection.add(match);
+    return { id: docRef.id, ...match };
   }
 
   // Firestoreの試合データを更新
   async updateMatch(match) {
-    if (!match.id) return;
+    if (!match.id) return null;
     await this.collection.doc(match.id).set(match);
+    // Firestore への書き込みが成功したら最新データを返す（UI 更新用）
+    return { ...match };
   }
 
   // Firestoreから試合を削除
