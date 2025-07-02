@@ -1,3 +1,4 @@
+console.log('FirestoreMatchDatabase.js loaded');
 // Firestoreと連携する大会データベース
 class FirestoreMatchDatabase {
   constructor() {
@@ -38,6 +39,17 @@ class FirestoreMatchDatabase {
   async getAllMatches() {
     const snapshot = await this.collection.get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+
+  // 完了した試合のみ取得（History 画面で使用）
+  async getCompletedMatches() {
+    const snapshot = await this.collection
+      .where('winner', '!=', null)
+      .get();
+
+    return snapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter(match => match.actualEndTime);
   }
 
   // Firestoreの購読解除
