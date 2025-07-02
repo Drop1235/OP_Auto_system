@@ -3,12 +3,12 @@
 // 2. セキュリティ: Firestore ルールを適切に設定してください
 
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyAsay13_YPXt4A3PW4tKi4fbjq7ozyXgU",
+  authDomain: "tennis-tournament-e26eb.firebaseapp.com",
+  projectId: "tennis-tournament-e26eb",
+  storageBucket: "tennis-tournament-e26eb.appspot.com",
+  messagingSenderId: "959926678362",
+  appId: "1:959926678362:web:7248df9a960638c35ff963"
 };
 
 // Initialize Firebase only once
@@ -18,4 +18,4 @@ if (!window.firebase || !window.firebase.apps || !window.firebase.apps.length) {
 
 // Initialize Firestore and Auth
 window.firestore = firebase.firestore();
-window.firebaseAuth = firebase.auth();
+// window.firebaseAuth = firebase.auth();  // 認証は後で追加
