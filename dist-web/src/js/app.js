@@ -1,5 +1,124 @@
 // Main application script
 document.addEventListener('DOMContentLoaded', () => {
+  // --- 大会管理機能 ここから ---
+  const tournamentSelect = document.getElementById('tournament-select');
+  const addTournamentBtn = document.getElementById('add-tournament-btn');
+  if (!tournamentSelect || !addTournamentBtn) {
+    alert('大会選択ドロップダウンまたは新規大会ボタンが見つかりません。HTMLにid="tournament-select"とid="add-tournament-btn"が含まれているか確認してください。');
+    return;
+  }
+
+  // 大会リスト取得・保存用
+  function getTournaments() {
+    const t = localStorage.getItem('tournaments');
+    return t ? JSON.parse(t) : [];
+  }
+  function saveTournaments(tournaments) {
+    localStorage.setItem('tournaments', JSON.stringify(tournaments));
+  }
+  function getCurrentTournamentId() {
+    return localStorage.getItem('currentTournamentId');
+  }
+  function setCurrentTournamentId(id) {
+    localStorage.setItem('currentTournamentId', id);
+  }
+
+  // 大会リスト初期化
+  let tournaments = getTournaments();
+  if (tournaments.length === 0) {
+    // デフォルト大会を作成
+    const defaultId = 'default-' + Date.now();
+    tournaments.push({ id: defaultId, name: 'デフォルト大会' });
+    saveTournaments(tournaments);
+    setCurrentTournamentId(defaultId);
+  }
+
+  // ドロップダウン反映
+  function updateTournamentSelect() {
+    tournaments = getTournaments();
+    const currentId = getCurrentTournamentId();
+    tournamentSelect.innerHTML = '';
+    tournaments.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id;
+      opt.textContent = t.name;
+      if (t.id === currentId) opt.selected = true;
+      tournamentSelect.appendChild(opt);
+    });
+  }
+  updateTournamentSelect();
+
+  // 新規大会名入力モーダル制御
+  const tournamentModal = document.getElementById('tournament-modal');
+  const tournamentNameInput = document.getElementById('tournament-name-input');
+  const tournamentModalOk = document.getElementById('tournament-modal-ok');
+  const tournamentModalCancel = document.getElementById('tournament-modal-cancel');
+
+  function openTournamentModal() {
+    tournamentModal.classList.add('active');
+    tournamentNameInput.value = '';
+    setTimeout(() => tournamentNameInput.focus(), 100);
+  }
+  function closeTournamentModal() {
+    tournamentModal.classList.remove('active');
+    tournamentNameInput.value = '';
+  }
+
+  addTournamentBtn.addEventListener('click', () => {
+    openTournamentModal();
+  });
+  tournamentModalCancel.addEventListener('click', () => {
+    closeTournamentModal();
+  });
+  tournamentModalOk.addEventListener('click', () => {
+    const name = tournamentNameInput.value.trim();
+    if (name) {
+      const id = 'tournament-' + Date.now();
+      tournaments.push({ id, name });
+      saveTournaments(tournaments);
+      setCurrentTournamentId(id);
+      updateTournamentSelect();
+      closeTournamentModal();
+      window.location.reload();
+    } else {
+      tournamentNameInput.focus();
+    }
+  });
+  tournamentNameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') tournamentModalOk.click();
+    if (e.key === 'Escape') closeTournamentModal();
+  });
+
+  // 大会切り替え
+  tournamentSelect.addEventListener('change', (e) => {
+    setCurrentTournamentId(e.target.value);
+    window.location.reload(); // 大会切り替え時に全リロード（後で最適化可）
+  });
+  // 大会削除機能
+  const deleteTournamentBtn = document.getElementById('delete-tournament-btn');
+  deleteTournamentBtn.addEventListener('click', () => {
+    const currentId = getCurrentTournamentId();
+    const currentName = tournaments.find(t => t.id === currentId)?.name || '';
+    if (!currentId) return;
+    if (tournaments.length === 1) {
+      alert('大会が1つしかないため削除できません。');
+      return;
+    }
+    if (!confirm(`大会「${currentName}」を本当に削除しますか？\nこの大会の対戦表・履歴データも全て消去されます。`)) {
+      return;
+    }
+    // 大会リストから削除
+    const newTournaments = tournaments.filter(t => t.id !== currentId);
+    saveTournaments(newTournaments);
+    // 大会データ削除
+    localStorage.removeItem('tennisTournamentMatches_' + currentId);
+    // 新しいカレントIDを決定
+    const nextId = newTournaments[0]?.id;
+    setCurrentTournamentId(nextId);
+    updateTournamentSelect();
+    window.location.reload();
+  });
+  // --- 大会管理機能 ここまで ---
   console.log('[APP] DOM content loaded, initializing application.');
   
   // ローカルストレージからコート数を取得（保存されていない場合はデフォルト値の12を使用）
@@ -207,11 +326,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (addMatchModal) {
         addMatchModal.style.display = 'block';
-      } else {
-        console.error('[APP] Add match modal not found');
-        alert('モーダルが見つかりません');
+        
+        // モーダルが表示された後に最初の入力フィールドにフォーカスを当てる
+        // --- 入力欄を即時有効化しフォーカスする処理 ---
+        const a = document.getElementById('player-a');
+        const b = document.getElementById('player-b');
+        if (a) {
+          a.removeAttribute('disabled');
+          a.readOnly = false;
+          a.style.pointerEvents = 'auto';
+        }
+        if (b) {
+          b.removeAttribute('disabled');
+          b.readOnly = false;
+          b.style.pointerEvents = 'auto';
+        }
+        // 1フレーム後にフォーカスを当てることで描画確定後に入力可能とする
+        requestAnimationFrame(() => {
+          if (a) a.focus();
+        });
       }
-      
       return false; // イベントの伝播を停止
     };
     

@@ -12,3 +12,7 @@ yarn-error.log*
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Local Netlify folder
+.netlify
+dist-web_old/

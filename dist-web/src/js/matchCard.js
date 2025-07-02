@@ -10,14 +10,37 @@ class MatchCard {
     this.initialTop = 0;
     this.dragThreshold = 5; // px
     
-    // セットスコア用のプロパティを初期化
-    if (!this.match.setScores) {
+    const numSets = this._getNumberOfSets(); // 試合形式に応じたセット数
+
+    // 既に setScores が提供されている場合はそれを優先
+    if (this.match.setScores && Array.isArray(this.match.setScores.A) && this.match.setScores.A.length === numSets) {
+      this.scoresA = [...this.match.setScores.A];
+      this.scoresB = [...this.match.setScores.B];
+    } else {
+      // スコア文字列をパースしてセットスコアを算出
+      this.scoresA = this._parseScores(this.match.scoreA, numSets);
+      this.scoresB = this._parseScores(this.match.scoreB, numSets);
+      // setScores が未定義、または長さが一致しない場合は、パース結果で上書き
       this.match.setScores = {
-        A: [0, 0, 0],
-        B: [0, 0, 0]
+        A: [...this.scoresA],
+        B: [...this.scoresB]
       };
     }
+
+    // scoreA / scoreB 文字列を整形して保持（setScores がある場合でも最新化）
+    // ただし、5game形式の場合は既存のスコアが適切であれば再フォーマットしない
+    const format = (this.match.gameFormat || '').toLowerCase();
+    const isSingleGame = format === '5game' || format === '4game1set' || format === '6game1set' || format === '8game1set';
     
+    if (isSingleGame && this.match.scoreA !== undefined && this.match.scoreA !== null && this.match.scoreA !== '') {
+      // 5game等の単一ゲーム形式で既にスコアが設定されている場合は保持
+      console.log('[MATCH_CARD] Preserving existing scores for single game format:', this.match.scoreA, this.match.scoreB);
+    } else {
+      // マルチセット形式または初期化時は再フォーマット
+      this.match.scoreA = this._stringifyScores(this.scoresA);
+      this.match.scoreB = this._stringifyScores(this.scoresB);
+    }
+
     // 勝者情報の初期化
     if (this.match.winner === undefined) {
       this.match.winner = null; // null, 'A', 'B' のいずれか
@@ -40,17 +63,6 @@ class MatchCard {
       this.match.gameFormat = '5game'; // Default to '5game'
     }
 
-    // Initialize scores
-    // scoreA and scoreB will now be comma-separated strings for multi-set matches
-    // this.scoresA and this.scoresB will be arrays of numbers
-    // Tiebreaks are kept as single strings for now
-    this.scoresA = this._parseScores(this.match.scoreA, this._getNumberOfSets());
-    this.scoresB = this._parseScores(this.match.scoreB, this._getNumberOfSets());
-    
-    // Ensure score strings in this.match are consistent with parsed arrays
-    this.match.scoreA = this._stringifyScores(this.scoresA);
-    this.match.scoreB = this._stringifyScores(this.scoresB);
-
     if (!this.match.memo) this.match.memo = '';
     this.match.tieBreakA = this.match.tieBreakA || '';
     this.match.tieBreakB = this.match.tieBreakB || '';
@@ -65,10 +77,22 @@ class MatchCard {
   }
 
   _getNumberOfSets() {
-    if (this.match.gameFormat === '4game3set' || this.match.gameFormat === '6game3set') {
-      return 3;
+    // ゲーム形式に応じて必要なセット数を返す
+    switch (this.match.gameFormat) {
+      // BO3（3セット先取）
+      case '4game3set':
+      case '6game3set':
+        return 3;
+      // BO3（2セット先取）
+      case '4game2set':
+      case '6game2set':
+        // 2セット終了後にマッチタイブレーク（ファイナルセット）が行われるため、
+        // UI上は 3 セット分の入力欄を確保する
+        return 3;
+      // それ以外（ワンセットマッチ等）
+      default:
+        return 1;
     }
-    return 1;
   }
 
   _parseScores(scoreString, numSets) {
@@ -123,7 +147,7 @@ class MatchCard {
     gameFormatDisplay.className = 'match-card-game-format-display';
     
     // 現在の試合形式のラベルを取得
-    const currentFormat = this.match.gameFormat || '5game';
+    const currentFormat = (this.match.gameFormat || '').toLowerCase();
     const formatLabel = this.gameFormatOptions[currentFormat] || currentFormat;
     
     // 試合形式の表示を設定
@@ -151,14 +175,6 @@ class MatchCard {
             detail: { match: updatedMatch }
           });
           document.dispatchEvent(updateEvent);
-          
-          // 履歴画面に切り替え
-          const historyViewBtn = document.getElementById('history-view-btn');
-          if (historyViewBtn) {
-            historyViewBtn.click();
-          } else {
-            console.error('[エラー] 履歴ボタンが見つかりません');
-          }
         }
       } catch (error) {
         console.error('試合の完了処理中にエラーが発生しました:', error);
@@ -216,12 +232,34 @@ class MatchCard {
     playerADiv.appendChild(playerAInput);
     
     // スコア入力A
+    let scoreContainerA; // プレイヤーAのスコア用ラッパーを先に宣言
     if (this.match.gameFormat === '6game3set' || this.match.gameFormat === '4game3set' || 
         this.match.gameFormat === '4game2set' || this.match.gameFormat === '6game2set') {
       // BO3形式の場合は3セット分のスコア入力欄を表示
+      scoreContainerA = document.createElement('div');
+      scoreContainerA.style.display = 'flex';
+      scoreContainerA.style.flexDirection = 'column';
+      scoreContainerA.style.alignItems = 'center';
+      scoreContainerA.style.gap = '2px';
+
       const setScoresContainerA = document.createElement('div');
       setScoresContainerA.className = 'set-scores-container';
-      
+       
+      this.tiebreakDivsA = [];
+      // A側セットスコア入力欄をコンテナに追加
+      scoreContainerA.appendChild(setScoresContainerA);
+
+      // --- タイブレーク行をカード下部にまとめて表示するためのコンテナを用意 ---
+      if (!this.tiebreakRow) {
+        const tRow = document.createElement('div');
+        tRow.className = 'tiebreak-row';
+        tRow.style.display = 'none';      // デフォルトは非表示、条件満たしたら表示
+        tRow.style.justifyContent = 'flex-end';
+        tRow.style.marginLeft = 'auto';
+        tRow.style.gap = '6px';
+        tRow.style.marginTop = '4px';
+        this.tiebreakRow = tRow;
+      }
       // 3セット分のスコア入力欄を作成
       for (let i = 0; i < 3; i++) {
         const setScoreInput = document.createElement('input');
@@ -229,7 +267,9 @@ class MatchCard {
         setScoreInput.min = '0';
         setScoreInput.max = '99';
         setScoreInput.className = 'set-score-input';
+        // データ属性を2種類保持しておくことで既存実装とユーティリティの両方に対応
         setScoreInput.dataset.player = 'A';
+        setScoreInput.dataset.setPlayer = 'A';
         setScoreInput.dataset.set = i;
         setScoreInput.value = this.match.setScores?.A[i] || '';
         
@@ -259,16 +299,69 @@ class MatchCard {
         });
         
         setScoresContainerA.appendChild(setScoreInput);
+        // --- 各セット用タイブレーク入力欄 ---
+        const tbWrapper = document.createElement('span');
+        tbWrapper.style.display = 'none'; // 初期非表示
+        tbWrapper.style.marginLeft = '2px';
+        const tbOpen = document.createElement('span'); tbOpen.textContent='('; tbOpen.style.fontSize='0.8em';
+        const tbInput = document.createElement('input');
+        tbInput.type='number'; tbInput.min='0'; tbInput.max='99'; tbInput.dataset.tiebreak='A'; tbInput.dataset.set=i; tbInput.style.width='40px'; tbInput.style.fontSize='0.7em';
+        const tbClose = document.createElement('span'); tbClose.textContent=')'; tbClose.style.fontSize='0.8em';
+        tbWrapper.appendChild(tbOpen);
+        tbWrapper.appendChild(tbInput);
+        tbWrapper.appendChild(tbClose);
+        // wrapper は下部の tiebreakRow へ追加
+        this.tiebreakRow.appendChild(tbWrapper);
+        // 参照配列に保持（_checkAndToggleTiebreakUI が利用）
+        if (!this.tiebreakWrappers) this.tiebreakWrappers = [];
+        if (!this.tiebreakInputs) this.tiebreakInputs = [];
+        this.tiebreakWrappers[i] = tbWrapper;
+        this.tiebreakInputs[i] = tbInput;
+        this.tiebreakDivsA[i] = { wrapper: tbWrapper, input: tbInput };
+        tbInput.addEventListener('change',(e)=>{const v=e.target.value; const sc=v===''?null:parseInt(v,10); if(!this.match.tieBreakA) this.match.tieBreakA=[]; this.match.tieBreakA[i]=sc; this.updateMatchData({tieBreakA:this.match.tieBreakA});});
       }
+
+      // --- タイブレーク入力欄（A） ---
+      const tiebreakDivA = document.createElement('div');
+      tiebreakDivA.className = 'tiebreak-score-container-a';
+      tiebreakDivA.style.display = 'inline-block';
+      tiebreakDivA.style.marginTop = '2px';
+
+      const tiebreakInputA = document.createElement('input');
+      tiebreakInputA.type = 'number';
+      tiebreakInputA.min = '0';
+      tiebreakInputA.max = '99';
+      tiebreakInputA.className = 'tiebreak-score-input';
+      tiebreakInputA.dataset.tiebreak = 'A';
+      tiebreakInputA.style.width = '40px'; // 幅を調整し2桁数字に対応
+      tiebreakInputA.style.height = '20px'; // 高さを小さく
+      tiebreakInputA.style.fontSize = '0.8em'; // フォントサイズを小さく
+      tiebreakInputA.style.padding = '0 2px'; // パディングを小さく
+      tiebreakInputA.placeholder = 'TB';
+      // 既存のタイブレークスコア値を設定
+      tiebreakInputA.value = this.match.tieBreakA || '';
+
+      const tbOpenParenA = document.createElement('span'); tbOpenParenA.textContent='('; tbOpenParenA.style.fontSize='0.8em';
+      const tbCloseParenA = document.createElement('span'); tbCloseParenA.textContent=')'; tbCloseParenA.style.fontSize='0.8em';
+      tiebreakDivA.appendChild(tbOpenParenA); tiebreakDivA.appendChild(tiebreakInputA); tiebreakDivA.appendChild(tbCloseParenA);
+
+      tiebreakInputA.addEventListener('change',(e)=>{ const v=e.target.value; const sc=v===''?null:parseInt(v,10); this.match.tieBreakA=sc; this.updateMatchData({tieBreakA:this.match.tieBreakA}); });
+      tiebreakInputA.addEventListener('click',(e)=>e.stopPropagation());
+
+      // scoreContainerAへ追加
+      // duplicate removed
       
-      playerADiv.appendChild(setScoresContainerA);
+
+      // 廃止: per-set TB に置き換え
+
+      // scoreContainerA は後で scoreWinContainerA にまとめて追加
       
       // 合計スコア表示用の要素
       const totalScoreA = document.createElement('div');
       totalScoreA.className = 'total-score';
       totalScoreA.textContent = this.match.scoreA || '0';
       totalScoreA.dataset.player = 'A';
-      playerADiv.appendChild(totalScoreA);
+      // totalScoreA は後で scoreWinContainerA にまとめて追加
     } else {
       // 通常のスコア入力欄
       const scoreAInput = document.createElement('input');
@@ -284,8 +377,8 @@ class MatchCard {
         this.match.scoreA = parseInt(e.target.value) || 0;
         this.updateMatchData({ scoreA: this.match.scoreA });
         this.updateDynamicElements();
+        console.log('[DEBUG] scoreA changed:', this.match.scoreA, 'gameFormat:', this.match.gameFormat);
         this.checkLeagueWinCondition();
-        this._checkAndToggleTiebreakUI(); // Add this call
       });
       
       scoreAInput.addEventListener('click', (e) => {
@@ -293,7 +386,7 @@ class MatchCard {
       });
       
       // スコア入力欄の上にタイブレーク入力欄を表示するコンテナ
-      const scoreContainerA = document.createElement('div');
+      scoreContainerA = document.createElement('div');
       scoreContainerA.style.display = 'flex';
       scoreContainerA.style.flexDirection = 'column';
       scoreContainerA.style.alignItems = 'center';
@@ -302,7 +395,7 @@ class MatchCard {
       // タイブレーク入力欄のクローンを作成
       const tiebreakDivA = document.createElement('div');
       tiebreakDivA.className = 'tiebreak-score-container-a';
-      tiebreakDivA.style.display = 'none'; // 初期状態では非表示
+      tiebreakDivA.style.display = 'inline-block'; // ラッパー側で表示制御
       tiebreakDivA.style.marginTop = '2px'; // スコア入力欄との間隔
       
       // タイブレークスコア入力フィールド
@@ -311,11 +404,17 @@ class MatchCard {
       tiebreakInputA.min = '0';
       tiebreakInputA.max = '99';
       tiebreakInputA.className = 'tiebreak-score-input';
-      tiebreakInputA.style.width = '30px'; // 幅を小さく
+      tiebreakInputA.dataset.tiebreak = 'A'; // data-tiebreak属性を追加
+      tiebreakInputA.style.width = '40px'; // 幅を調整し2桁数字に対応
       tiebreakInputA.style.height = '20px'; // 高さを小さく
       tiebreakInputA.style.fontSize = '0.8em'; // フォントサイズを小さく
       tiebreakInputA.style.padding = '0 2px'; // パディングを小さく
+      tiebreakInputA.style.pointerEvents = 'auto'; // クリック可能にする
+      tiebreakInputA.style.cursor = 'text'; // テキスト入力カーソルを表示
       tiebreakInputA.placeholder = 'TB';
+      tiebreakInputA.tabIndex = 0; // タブフォーカス可能にする
+      // 既存のタイブレークスコア値を設定
+      tiebreakInputA.value = this.match.tieBreakA || '';
       
       // カッコで囲む
       const tbOpenParenA = document.createElement('span');
@@ -334,22 +433,56 @@ class MatchCard {
       tiebreakInputA.addEventListener('change', (e) => {
         const value = e.target.value;
         const score = value === '' ? null : parseInt(value, 10);
-        this.match.tiebreakScore = score;
-        this.updateMatchData({ tiebreakScore: score });
+        this.match.tieBreakA = score;
+        this.updateMatchData({ tieBreakA: this.match.tieBreakA });
       });
       
       tiebreakInputA.addEventListener('click', (e) => {
         e.stopPropagation();
+        // フォーカスを確実に当てる
+        e.target.focus();
       });
       
-      // スコア入力欄を先に追加し、その後にタイブレーク入力欄を追加
-      scoreContainerA.appendChild(scoreAInput);
-      scoreContainerA.appendChild(tiebreakDivA);
+      // フォーカスイベントを追加
+      tiebreakInputA.addEventListener('focus', (e) => {
+        console.log('[MATCH_CARD] タイブレーク入力欄にフォーカス');
+        e.target.select(); // フォーカス時にテキストを選択
+      });
       
+      // マウスダウンイベントを追加
+      tiebreakInputA.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+      });
+      
+      // スコア入力欄のみ scoreContainerA に追加
+      scoreContainerA.appendChild(scoreAInput);
+
+      // ---- 1セット形式用タイブレーク行を作成 ----
+      const tiebreakRow = document.createElement('div');
+      tiebreakRow.className = 'tiebreak-row';
+      // 初期は非表示。_checkAndToggleTiebreakUI で条件を満たしたら "flex" に変更される
+      // 初期は非表示とし、表示条件を満たした際に _checkAndToggleTiebreakUI で "flex" に切り替える
+      tiebreakRow.style.display = 'none';
+      tiebreakRow.style.justifyContent = 'flex-end';
+      tiebreakRow.style.gap = '8px';
+      // 右端に寄せるために左側をautoにする
+      tiebreakRow.style.marginLeft = 'auto';
+
+      // 個別ラッパー（1セットなので1つのみ）
+      const wrapper = document.createElement('span');
+      wrapper.style.display = 'none'; // 初期非表示。トグル時に inline-block
+      wrapper.appendChild(tiebreakDivA);
+      tiebreakRow.appendChild(wrapper);
+
+      // MatchCard プロパティへ保持し、_checkAndToggleTiebreakUI が参照できるようにする
+      this.tiebreakRow = tiebreakRow;
+      this.tiebreakWrappers = [wrapper];
       this.tiebreakDivA = tiebreakDivA;
       this.tiebreakInputA = tiebreakInputA;
+
+      // playersContainer へは createCardElement の末尾でまとめて追加される
       
-      playerADiv.appendChild(scoreContainerA);
+      // scoreContainerA は後で scoreWinContainerA にまとめて追加
     }
     
     // Win表示/ボタン（プレイヤーA）
@@ -358,7 +491,7 @@ class MatchCard {
     winADiv.dataset.player = 'A';
     
     // 常にクリックイベントを追加するように修正
-    winADiv.textContent = this.match.winner === 'A' ? 'Win' : '○';
+    winADiv.textContent = this.match.winner === 'A' ? '✔' : '●';
     winADiv.style.color = this.match.winner === 'A' ? 'red' : '';
     if (this.match.winner === 'A') {
       winADiv.classList.remove('win-button');
@@ -366,6 +499,160 @@ class MatchCard {
       winADiv.classList.add('win-button');
     }
     
+    // 右寄せ用コンテナを生成して A 行に配置
+    const scoreWinContainerA = document.createElement('div');
+    scoreWinContainerA.style.display = 'flex';
+    scoreWinContainerA.style.alignItems = 'center';
+    scoreWinContainerA.style.gap = '4px';
+    scoreWinContainerA.style.marginLeft = 'auto';
+
+    scoreWinContainerA.appendChild(winADiv);
+    if (typeof totalScoreA !== 'undefined') scoreWinContainerA.appendChild(totalScoreA);
+    scoreWinContainerA.appendChild(scoreContainerA);
+    playerADiv.appendChild(scoreWinContainerA);
+
+    // --- A行を playersContainer に追加 ---
+    playersContainer.appendChild(playerADiv);
+
+    // ================================
+    // プレイヤーB行の生成
+    const playerBDiv = document.createElement('div');
+    playerBDiv.className = 'match-card-player';
+
+    const playerBInput = document.createElement('input');
+    playerBInput.type = 'text';
+    playerBInput.className = 'player-name-input';
+    playerBInput.dataset.player = 'B';
+    playerBInput.value = this.match.playerB;
+    playerBInput.addEventListener('change', (e) => {
+      this.updateMatchData({ playerB: e.target.value });
+    });
+    playerBDiv.appendChild(playerBInput);
+
+    // スコア入力B
+    let scoreContainerB;
+    if (this.match.gameFormat === '6game3set' || this.match.gameFormat === '4game3set' ||
+        this.match.gameFormat === '4game2set' || this.match.gameFormat === '6game2set') {
+      // BO3 形式
+      scoreContainerB = document.createElement('div');
+      scoreContainerB.style.display = 'flex';
+      scoreContainerB.style.flexDirection = 'column';
+      scoreContainerB.style.alignItems = 'center';
+      scoreContainerB.style.gap = '2px';
+
+      const setScoresContainerB = document.createElement('div');
+      setScoresContainerB.className = 'set-scores-container';
+
+      for (let i = 0; i < 3; i++) {
+        const setInput = document.createElement('input');
+        setInput.type = 'number';
+        setInput.min = '0';
+        setInput.max = '99';
+        setInput.className = 'set-score-input';
+        setInput.dataset.player = 'B';
+        setInput.dataset.setPlayer = 'B';
+        setInput.dataset.set = i;
+        setInput.value = this.match.setScores?.B[i] || '';
+
+        setInput.addEventListener('change', (e) => {
+          if (!this.match.setScores) {
+            this.match.setScores = { A: [0,0,0], B: [0,0,0] };
+          }
+          this.match.setScores.B[i] = parseInt(e.target.value) || 0;
+          this.calculateTotalScore();
+          this.updateMatchData({
+            scoreA: this.match.scoreA,
+            scoreB: this.match.scoreB,
+            setScores: this.match.setScores
+          });
+          this.updateDynamicElements();
+          this.checkLeagueWinCondition();
+        });
+        setInput.addEventListener('click', (e) => e.stopPropagation());
+        setScoresContainerB.appendChild(setInput);
+      }
+
+      scoreContainerB.appendChild(setScoresContainerB);
+
+      // 合計スコア（セットカウント）はスコア入力欄の左側に配置するため、
+      // scoreWinContainerB へ後で追加
+      const totalScoreB = document.createElement('div');
+      totalScoreB.className = 'total-score';
+      totalScoreB.textContent = this.match.scoreB || '0';
+      totalScoreB.dataset.player = 'B';
+    } else {
+      // 単セット形式
+      const scoreBInput = document.createElement('input');
+      scoreBInput.type = 'number';
+      scoreBInput.min = '0';
+      scoreBInput.max = '99';
+      scoreBInput.className = 'score-input';
+      scoreBInput.dataset.player = 'B';
+      scoreBInput.value = (this.match.scoreB === null || this.match.scoreB === undefined) ? '' : this.match.scoreB;
+      this.scoreBInput = scoreBInput;
+
+      scoreBInput.addEventListener('change', (e) => {
+        this.match.scoreB = parseInt(e.target.value) || 0;
+        this.updateMatchData({ scoreB: this.match.scoreB });
+        this.updateDynamicElements();
+        this.checkLeagueWinCondition();
+      });
+      scoreBInput.addEventListener('click', (e) => e.stopPropagation());
+
+      scoreContainerB = document.createElement('div');
+      scoreContainerB.style.display = 'flex';
+      scoreContainerB.style.flexDirection = 'column';
+      scoreContainerB.style.alignItems = 'center';
+      scoreContainerB.style.gap = '2px';
+      scoreContainerB.appendChild(scoreBInput);
+
+      // B側タイブレーク入力欄（常時非表示、UI一貫性のため要素のみ保持）
+      const tiebreakDivB = document.createElement('div');
+      tiebreakDivB.className = 'tiebreak-score-container-b';
+      tiebreakDivB.style.display = 'inline-block';
+      this.tiebreakDivB = tiebreakDivB;
+      scoreContainerB.appendChild(tiebreakDivB);
+    }
+
+    // WinラベルB
+    const winBDiv = document.createElement('div');
+    winBDiv.className = 'win-label';
+    winBDiv.dataset.player = 'B';
+    winBDiv.textContent = this.match.winner === 'B' ? '✔' : '●';
+    winBDiv.style.color = this.match.winner === 'B' ? 'red' : '';
+    if (this.match.winner !== 'B') winBDiv.classList.add('win-button');
+
+    const scoreWinContainerB = document.createElement('div');
+    scoreWinContainerB.style.display = 'flex';
+    scoreWinContainerB.style.alignItems = 'center';
+    scoreWinContainerB.style.gap = '4px';
+    scoreWinContainerB.style.marginLeft = 'auto';
+
+    scoreWinContainerB.appendChild(winBDiv);
+    // セットカウントをスコア入力欄の左側に配置
+    if (typeof totalScoreB !== 'undefined') scoreWinContainerB.appendChild(totalScoreB);
+    scoreWinContainerB.appendChild(scoreContainerB);
+    playerBDiv.appendChild(scoreWinContainerB);
+
+    winBDiv.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (this.match.winner === 'B') {
+        this.match.winner = null;
+        this.match.actualEndTime = null;
+      } else {
+        this.match.winner = 'B';
+        const now = new Date();
+        this.match.actualEndTime = now.toISOString();
+      }
+      this.updateMatchData({ winner: this.match.winner, actualEndTime: this.match.actualEndTime });
+      this.updateWinStatus();
+      this.updateEndTimeDisplay();
+    });
+
+    // playersContainer にB行を追加
+    playersContainer.appendChild(playerBDiv);
+
+
     // Winボタンのクリックイベントを追加
     winADiv.addEventListener('click', (e) => {
       e.stopPropagation(); // ダブルクリックイベントの伝播を防止
@@ -388,164 +675,55 @@ class MatchCard {
         winner: this.match.winner,
         actualEndTime: this.match.actualEndTime 
       });
-      
-      // UI更新
       this.updateWinStatus();
       this.updateEndTimeDisplay();
-    });
-    winADiv.dataset.player = 'A';
-    playerADiv.appendChild(winADiv);
-    
-    // プレイヤーB
-    const playerBDiv = document.createElement('div');
-    playerBDiv.className = 'match-card-player';
-    // プレイヤー名
-    const playerBInput = document.createElement('input');
-    playerBInput.type = 'text';
-    playerBInput.className = 'player-name-input';
-    playerBInput.dataset.player = 'B'; // Add data-player attribute
-    playerBInput.value = this.match.playerB;
-    playerBInput.addEventListener('change', (e) => {
-      this.updateMatchData({ playerB: e.target.value });
-    });
-    playerBDiv.appendChild(playerBInput);
-    
-    // スコア入力B
-    if (this.match.gameFormat === '6game3set' || this.match.gameFormat === '4game3set' || 
-        this.match.gameFormat === '4game2set' || this.match.gameFormat === '6game2set') {
-      // BO3形式の場合は3セット分のスコア入力欄を表示
-      const setScoresContainerB = document.createElement('div');
-      setScoresContainerB.className = 'set-scores-container';
+    }); // ← クリックハンドラをここで閉じる
       
-      // 3セット分のスコア入力欄を作成
+
+      // duplicate removed
+      
+
+      
+
+      
+      /* duplicate block removed
+      tiebreakRow.className = 'tiebreak-row';
+      tiebreakRow.style.display = 'flex'; // 常時表示行（個別ラッパーをトグル）
+      tiebreakRow.style.justifyContent = 'flex-end';
+      tiebreakRow.style.gap = '8px';
+      tiebreakRow.style.marginRight = '40px';
+
+      this.tiebreakWrappers = [];
+      this.tiebreakInputs = [];
+      // 3セット分のTB入力欄を横に並べる
       for (let i = 0; i < 3; i++) {
-        const setScoreInput = document.createElement('input');
-        setScoreInput.type = 'number';
-        setScoreInput.min = '0';
-        setScoreInput.max = '99';
-        setScoreInput.className = 'set-score-input';
-        setScoreInput.dataset.player = 'B';
-        setScoreInput.dataset.set = i;
-        setScoreInput.value = this.match.setScores?.B[i] || '';
-        
-        setScoreInput.addEventListener('change', (e) => {
-          // セットスコアを更新
-          if (!this.match.setScores) {
-            this.match.setScores = { A: [0, 0, 0], B: [0, 0, 0] };
-          }
-          this.match.setScores.B[i] = parseInt(e.target.value) || 0;
-          
-          // 全体のスコアを計算（勝ったセット数）
-          this.calculateTotalScore();
-          
-          // DB更新
-          this.updateMatchData({
-            scoreA: this.match.scoreA,
-            scoreB: this.match.scoreB,
-            setScores: this.match.setScores
-          });
-          
-          this.updateDynamicElements();
-          this.checkLeagueWinCondition();
+        const wrapper = document.createElement('span');
+        wrapper.style.display = 'inline-block'; // 個別初期非表示
+        const open = document.createElement('span'); open.textContent='('; open.style.fontSize='0.8em';
+        const input = document.createElement('input');
+        input.type='number'; input.min='0'; input.max='99'; input.dataset.tiebreak='A'; input.dataset.set=i; input.style.width='40px'; input.style.fontSize='0.8em'; input.placeholder='TB';
+        const close = document.createElement('span'); close.textContent=')'; close.style.fontSize='0.8em';
+        wrapper.appendChild(open); wrapper.appendChild(input); wrapper.appendChild(close);
+        tiebreakRow.appendChild(wrapper);
+        this.tiebreakWrappers[i]=wrapper;
+        this.tiebreakInputs[i]=input;
+        input.addEventListener('change',(e)=>{
+          const v=e.target.value; const sc=v===''?null:parseInt(v,10);
+          if(!Array.isArray(this.match.tieBreakA)) this.match.tieBreakA=[null,null,null];
+          this.match.tieBreakA[i]=sc;
+          this.updateMatchData({ tieBreakA: this.match.tieBreakA });
         });
-        
-        setScoreInput.addEventListener('click', (e) => {
-          e.stopPropagation();
-        });
-        
-        setScoresContainerB.appendChild(setScoreInput);
+        input.addEventListener('click',e=>e.stopPropagation());
       }
-      
-      playerBDiv.appendChild(setScoresContainerB);
-      
-      // 合計スコア表示用の要素
-      const totalScoreB = document.createElement('div');
-      totalScoreB.className = 'total-score';
-      totalScoreB.textContent = this.match.scoreB || '0';
-      totalScoreB.dataset.player = 'B';
-      playerBDiv.appendChild(totalScoreB);
-    } else {
-      // 通常のスコア入力欄
-      const scoreBInput = document.createElement('input');
-      scoreBInput.type = 'number';
-      scoreBInput.min = '0';
-      scoreBInput.max = '99';
-      scoreBInput.className = 'score-input';
-      scoreBInput.dataset.player = 'B';
-      scoreBInput.value = (this.match.scoreB === null || this.match.scoreB === undefined) ? '' : this.match.scoreB;
-      this.scoreBInput = scoreBInput; // Assign to instance property
-      
-      scoreBInput.addEventListener('change', (e) => {
-        this.match.scoreB = parseInt(e.target.value) || 0;
-        this.updateMatchData({ scoreB: this.match.scoreB });
-        this.updateDynamicElements();
-        this.checkLeagueWinCondition();
-        this._checkAndToggleTiebreakUI(); // Add this call
-      });
-      
-      scoreBInput.addEventListener('click', (e) => {
-        e.stopPropagation();
-      });
-      
-      playerBDiv.appendChild(scoreBInput);
-    }
-    
-    // Win表示/ボタン（プレイヤーB）
-    const winBDiv = document.createElement('div');
-    winBDiv.className = 'win-label';
-    winBDiv.dataset.player = 'B';
-    
-    // 常にクリックイベントを追加するように修正
-    winBDiv.textContent = this.match.winner === 'B' ? 'Win' : '○';
-    winBDiv.style.color = this.match.winner === 'B' ? 'red' : '';
-    if (this.match.winner === 'B') {
-      winBDiv.classList.remove('win-button');
-    } else {
-      winBDiv.classList.add('win-button');
-    }
-    
-    // Winボタンのクリックイベントを追加
-    winBDiv.addEventListener('click', (e) => {
-      e.stopPropagation(); // ダブルクリックイベントの伝播を防止
-      
-      // 現在の勝者をクリア
-      if (this.match.winner === 'B') {
-        this.match.winner = null;
-        // Win状態が解除されたときに終了時刻をクリア
-        this.match.actualEndTime = null;
-      } else {
-        // Bを勝者に設定
-        this.match.winner = 'B';
-        // Win状態になったときに現在時刻を自動設定
-        const now = new Date();
-        this.match.actualEndTime = now.toISOString();
-      }
-      
-      // DB更新
-      this.updateMatchData({ 
-        winner: this.match.winner,
-        actualEndTime: this.match.actualEndTime 
-      });
-      
-      // UI更新
-      this.updateWinStatus();
-      this.updateEndTimeDisplay();
-    });
-    winBDiv.dataset.player = 'B';
-    playerBDiv.appendChild(winBDiv);
-    
-    // タイブレーク入力欄はスコア入力欄の作成時に追加されるため、ここでは作成しない
-    
-    // プレイヤーAとプレイヤーBを追加
-    playersContainer.appendChild(playerADiv);
-    playersContainer.appendChild(playerBDiv);
-    
-    // タイブレーク入力欄の配置を削除する。スコア入力欄の横に追加するため
-    
-    // タイブレーク入力欄のイベントリスナーはスコア入力欄の作成時に設定されるため、ここでは設定しない
+    duplicate block end */
 
   card.appendChild(headerDiv);
-  card.appendChild(playersContainer);
+  card.appendChild(playersContainer); // playersContainer 内に TB 行も含まれるようになった
+
+  // TB行を playersContainer の下に追加（存在する場合のみ）
+  if (this.tiebreakRow && !playersContainer.contains(this.tiebreakRow)) {
+    playersContainer.appendChild(this.tiebreakRow);
+  }
 
 
 
@@ -560,64 +738,225 @@ class MatchCard {
     const score = value === '' ? null : parseInt(value, 10);
 
     if (player === 'A') {
-      this.match.tiebreakScoreA = score;
-      this.updateMatchData({ tiebreakScoreA: this.match.tiebreakScoreA });
+      this.match.tieBreakA = score;
+      this.updateMatchData({ tieBreakA: this.match.tieBreakA });
     } else if (player === 'B') {
-      this.match.tiebreakScoreB = score;
-      this.updateMatchData({ tiebreakScoreB: this.match.tiebreakScoreB });
+      this.match.tieBreakB = score;
+      this.updateMatchData({ tieBreakB: this.match.tieBreakB });
     }
     // console.log(`[MATCH_CARD] Tiebreak score updated for player ${player}:`, score, this.match);
   }
 
-  // Checks conditions and shows/hides the tiebreak UI
+  // タイブレーク入力欄の表示・非表示を制御
   _checkAndToggleTiebreakUI() {
-    console.log('[DEBUG] Checking Tiebreak UI. Format:', this.match.gameFormat, 'Score A:', this.match.scoreA, 'Score B:', this.match.scoreB); // <--- Debug log added
+    // 試合形式を小文字に統一
+    const format = (this.match.gameFormat || '').toLowerCase();
 
-    if (!this.tiebreakDivA || !this.tiebreakInputA) {
-      // Tiebreak elements might not exist if card creation failed or for different match types
-      console.warn('[MATCH_CARD] Tiebreak UI elements not found for match ID:', this.match.id);
-      return;
+    // 1セット方式用に合計スコアを取得（未入力は -1 扱い）
+    let scoreA = parseInt(this.match.scoreA, 10);
+    let scoreB = parseInt(this.match.scoreB, 10);
+    if (isNaN(scoreA)) scoreA = -1;
+    if (isNaN(scoreB)) scoreB = -1;
+
+    let showTiebreak = false;
+
+    // 5G 形式 (4-5 / 5-4) はタイブレーク
+    if (format === '5game' && ((scoreA === 5 && scoreB === 4) || (scoreA === 4 && scoreB === 5))) {
+      showTiebreak = true;
     }
 
-    const format = this.match.gameFormat;
-    const scoreA = typeof this.match.scoreA === 'number' ? this.match.scoreA : -1;
-    const scoreB = typeof this.match.scoreB === 'number' ? this.match.scoreB : -1;
+    // BO3 形式 (4G/6G/8G 2set・3set 等) の判定
+    if (format.startsWith('6game') || format.startsWith('4game') || format.startsWith('8game')) {
+      const setScores = this.match.setScores || { A: [], B: [] };
+      for (let i = 0; i < setScores.A.length; i++) {
+        const sA = parseInt(setScores.A[i], 10);
+        const sB = parseInt(setScores.B[i], 10);
+        if (isNaN(sA) || isNaN(sB)) continue;
+
+        if (format.startsWith('6game')) {
+          if ((sA === 7 && sB === 6) || (sA === 6 && sB === 7)) {
+            showTiebreak = true;
+            break;
+          }
+        } else if (format.startsWith('4game')) {
+          if ((sA === 5 && sB === 4) || (sA === 4 && sB === 5)) {
+            showTiebreak = true;
+            break;
+          }
+        } else if (format.startsWith('8game')) {
+          if ((sA === 9 && sB === 8) || (sA === 8 && sB === 9)) {
+            showTiebreak = true;
+            break;
+          }
+        }
+      }
+    }
+
+    // 単セット形式のTB表示条件
+    if (!showTiebreak) {
+      if (format === '6game1set' && ((scoreA === 7 && scoreB === 6) || (scoreA === 6 && scoreB === 7))) {
+        showTiebreak = true;
+      } else if (format === '4game1set' && ((scoreA === 5 && scoreB === 4) || (scoreA === 4 && scoreB === 5))) {
+        showTiebreak = true;
+      } else if (format === '8game1set' && ((scoreA === 9 && scoreB === 8) || (scoreA === 8 && scoreB === 9))) {
+        showTiebreak = true;
+      }
+    }
+
+    // ----- 表示・非表示の反映 -----
+    if (showTiebreak) {
+      // セット毎の表示判定 (BO3 用)
+      if (this.tiebreakWrappers && Array.isArray(this.tiebreakWrappers)) {
+        const setScores = this.match.setScores || { A: [], B: [] };
+        this.tiebreakWrappers.forEach((wrapper, idx) => {
+          const sA = parseInt(setScores.A[idx], 10);
+          const sB = parseInt(setScores.B[idx], 10);
+          let show = false;
+
+          if (format.startsWith('6game') && ((sA === 7 && sB === 6) || (sA === 6 && sB === 7))) show = true;
+          if (format.startsWith('4game') && ((sA === 5 && sB === 4) || (sA === 4 && sB === 5))) show = true;
+          if (format.startsWith('8game') && ((sA === 9 && sB === 8) || (sA === 8 && sB === 9))) show = true;
+
+          // 2set+10MTB 形式ではファイナルセット（idx === 2）はマッチタイブレークのため別入力欄を表示しない
+          if ((this.match.gameFormat === '4game2set' || this.match.gameFormat === '6game2set') && idx === 2) {
+            show = false;
+          }
+
+          wrapper.style.display = show ? 'inline-block' : 'none';
+          if (show) {
+            const stored = Array.isArray(this.match.tieBreakA) ? this.match.tieBreakA[idx] : '';
+            if (this.tiebreakInputs && this.tiebreakInputs[idx]) {
+              const input = this.tiebreakInputs[idx];
+              input.value = stored != null ? stored : '';
+              // 入力フィールドをアクティブにする
+              input.disabled = false;
+              input.readOnly = false;
+              input.style.pointerEvents = 'auto';
+              input.style.cursor = 'text';
+              input.tabIndex = 0;
+              console.log('[MATCH_CARD] タイブレーク入力欄をアクティブ化:', idx);
+            }
+          }
+        });
+      }
+
+      // 行全体を表示して、B 側入力欄は常に非表示
+      // 1set 形式では先頭ラッパーのみ表示し、他は非表示
+    if (format.includes('1set') && this.tiebreakWrappers && this.tiebreakWrappers.length) {
+      this.tiebreakWrappers.forEach((w, idx) => {
+        w.style.display = idx === 0 ? 'inline-block' : 'none';
+        // 先頭ラッパーの入力フィールドをアクティブ化
+        if (idx === 0 && this.tiebreakInputs && this.tiebreakInputs[idx]) {
+          const input = this.tiebreakInputs[idx];
+          input.disabled = false;
+          input.readOnly = false;
+          input.style.pointerEvents = 'auto';
+          input.style.cursor = 'text';
+          input.tabIndex = 0;
+          console.log('[MATCH_CARD] 1セット形式タイブレーク入力欄をアクティブ化');
+        }
+      });
+    }
+      // ラッパーのいずれかが表示されているか確認し、行全体を切り替え
+      const anyVisible = this.tiebreakWrappers && Array.from(this.tiebreakWrappers).some(w => w.style.display !== 'none');
+      if (this.tiebreakRow) this.tiebreakRow.style.display = anyVisible ? 'flex' : 'none';
+      if (this.tiebreakDivB) this.tiebreakDivB.style.display = anyVisible ? 'inline-block' : 'none';
+    } else {
+      // 非表示時
+      if (this.tiebreakWrappers) this.tiebreakWrappers.forEach(w => w.style.display = 'none');
+      if (this.tiebreakRow) this.tiebreakRow.style.display = 'none';
+    }
+  }
+
+
+    /* DUPLICATE TIEBREAK LOGIC - START
+    if (isNaN(scoreA)) scoreA = -1;
+    if (isNaN(scoreB)) scoreB = -1;
     let showTiebreak = false;
 
     // Define conditions for showing tiebreak input
     // Based on user request: "4G,6G,8Gの試合はそれぞれ4対5,6対7.8対9はタイブレークが発生"
     // Show tiebreak input when scores indicate a tiebreak was played (e.g., 4-5, 5-4, 6-7, 7-6, etc.)
-    
+  
     // 5game format
     if (format === '5game' && ((scoreA === 5 && scoreB === 4) || (scoreA === 4 && scoreB === 5))) {
       showTiebreak = true;
     }
-    // 6game1set or 6game3set format
-    else if ((format === '6game1set' || format === '6game3set') && 
-             ((scoreA === 7 && scoreB === 6) || (scoreA === 6 && scoreB === 7))) {
-      showTiebreak = true;
+  
+    // BO3（2set/3set）形式でのタイブレーク表示条件を追加
+    if (format.startsWith('6game') || format.startsWith('4game') || format.startsWith('8game')) {
+      // セットスコア配列を取得
+      const setScores = this.match.setScores || { A: [], B: [] };
+      // 各セットを走査し、タイブレークが起きたセットがあるか判定する
+      for (let i = 0; i < setScores.A.length; i++) {
+        const sA = parseInt(setScores.A[i], 10);
+        const sB = parseInt(setScores.B[i], 10);
+        if (isNaN(sA) || isNaN(sB)) continue;
+
+        if (format.startsWith('6game')) {
+          if ((sA === 7 && sB === 6) || (sA === 6 && sB === 7)) {
+            showTiebreak = true;
+            break;
+          }
+        } else if (format.startsWith('4game')) {
+          if ((sA === 5 && sB === 4) || (sA === 4 && sB === 5)) {
+            showTiebreak = true;
+            break;
+          }
+        }
+      }
     }
-    // 8game1set format
-    else if (format === '8game1set' && 
-             ((scoreA === 9 && scoreB === 8) || (scoreA === 8 && scoreB === 9))) {
+  
+    // 単セット形式のTB表示条件
+    let shouldShowSingle = false;
+    if (format === '6game1set') {
+      shouldShowSingle = ( (scoreA === 7 && scoreB === 6) || (scoreA === 6 && scoreB === 7) );
+    } else if (format === '4game1set') {
+      shouldShowSingle = ( (scoreA === 5 && scoreB === 4) || (scoreA === 4 && scoreB === 5) );
+    } else if (format === '8game1set') {
+      shouldShowSingle = ( (scoreA === 9 && scoreB === 8) || (scoreA === 8 && scoreB === 9) );
+    }
+    if (shouldShowSingle) {
       showTiebreak = true;
     }
     // Add more conditions if other formats also have tiebreaks under specific scores
 
     if (showTiebreak) {
-      this.tiebreakDivA.style.display = 'inline-block'; // タイブレーク入力欄を表示
-      this.tiebreakInputA.value = this.match.tiebreakScore !== null ? this.match.tiebreakScore : '';
+      // プレイヤーA側のみタイブレーク入力欄を表示し、B側は常に非表示にする（ユーザー要望）
+      // per-set 表示制御に変更
+      if(this.tiebreakWrappers){
+        const setScores = this.match.setScores || { A: [], B: [] };
+        this.tiebreakWrappers.forEach((wrapper,idx)=>{
+          const sA=parseInt(setScores.A[idx],10);
+          const sB=parseInt(setScores.B[idx],10);
+          let show=false;
+          if(format.startsWith('6game') && ((sA===7&&sB===6)||(sA===6&&sB===7))) show=true;
+          if(format.startsWith('4game') && ((sA===5&&sB===4)||(sA===4&&sB===5))) show=true;
+          wrapper.style.display= show? 'inline-block':'none';
+          if(show){
+            const stored=Array.isArray(this.match.tieBreakA)?this.match.tieBreakA[idx]:'';
+            this.tiebreakInputs[idx].value = stored!=null?stored:'';
+          }
+        });
+        // TB 行自体の表示
+        this.tiebreakRow.style.display = 'flex';
+      }
+      this.tiebreakDivB.style.display = 'inline-block';
     } else {
-      this.tiebreakDivA.style.display = 'none'; // タイブレーク入力欄を非表示
+      if(this.tiebreakWrappers){this.tiebreakWrappers.forEach(w=>w.style.display='none');}
+      this.tiebreakRow.style.display = 'flex';
       // オプション: メインスコアがタイブレークの条件を満たさなくなった場合、タイブレークスコアをクリアすることも検討
-      // if (this.match.tiebreakScore !== null) {
-      //   this.match.tiebreakScore = null;
-      //   this.updateMatchData({ tiebreakScore: null });
+      // if (this.match.tieBreakA !== null) {
+      //   this.match.tieBreakA = null;
+      //   this.updateMatchData({ tieBreakA: null });
+      // }
+      // if (this.match.tieBreakB !== null) {
+      //   this.match.tieBreakB = null;
+      //   this.updateMatchData({ tieBreakB: null });
       // }
     }
-  }
-
-// 動的要素を更新するメソッド - スコア入力時に呼び出される
+    */
+    // 動的要素を更新するメソッド - スコア入力時に呼び出される
 updateDynamicElements() {
   // スコアに基づいて動的に変更が必要な要素を更新
   this._checkAndToggleTiebreakUI();
@@ -657,7 +996,7 @@ async updateMatchData(updatedData) {
         console.error('Failed to update match in DB:', error);
       }
     } else {
-      console.warn('db.updateMatch function not found. Match data updated in component state only.');
+      console.warn('db.updateMatch function not found, skipping DB update');
     }
     this.updateWinStatus();
     this.updateEndTimeDisplay();
@@ -715,10 +1054,290 @@ shouldShowWin(player) {
   return this.match.winner === player;
 }
 
-async checkLeagueWinCondition() { // Renamed in thought process, but keeping for now
-  if (this.match.gameFormat === 'league') {
-    const scoreA = parseInt(this.match.scoreA) || 0;
-    const scoreB = parseInt(this.match.scoreB) || 0;
+async checkLeagueWinCondition() {
+    // デバッグ情報を画面上に表示する関数（本番環境では表示しない）
+    function showDebug(msg) {
+      // デバッグモードがオフの場合は何もしない
+      const debugMode = false; // デバッグモードをオフに設定
+      if (!debugMode) return;
+      
+      let dbg = document.getElementById('cascade-debug');
+      if (!dbg) {
+        dbg = document.createElement('div');
+        dbg.id = 'cascade-debug';
+        dbg.style.position = 'fixed';
+        dbg.style.top = '10px';
+        dbg.style.right = '10px';
+        dbg.style.background = 'yellow';
+        dbg.style.zIndex = 9999;
+        dbg.style.fontSize = '16px';
+        dbg.style.padding = '8px';
+        document.body.appendChild(dbg);
+      }
+      dbg.innerHTML += msg + '<br>';
+    }
+    
+    // 試合形式を小文字に統一
+    const format = (this.match.gameFormat || '').toLowerCase();
+    
+    // 両方のスコアが入力されているか確認
+    const scoreAEntered = this.match.scoreA !== null && this.match.scoreA !== undefined && this.match.scoreA !== '';
+    const scoreBEntered = this.match.scoreB !== null && this.match.scoreB !== undefined && this.match.scoreB !== '';
+    
+    // スコアを数値化
+    let scoreA = scoreAEntered ? parseInt(this.match.scoreA, 10) : null;
+    let scoreB = scoreBEntered ? parseInt(this.match.scoreB, 10) : null;
+    let newWinner = null;
+    let newStatus = this.match.status;
+    
+    showDebug('[DEBUG] checkLeagueWinCondition called');
+    showDebug('[DEBUG] format: ' + format);
+    showDebug('[DEBUG] scoreA: ' + scoreA + ', scoreB: ' + scoreB);
+    
+    // BO3形式（4G/6G 2set・3set 等）のみ判定
+    const bo3Formats = ['4game3set', '6game3set', '4game2set', '6game2set'];
+    if (bo3Formats.includes(this.match.gameFormat)) {
+      // まずcalculateTotalScoreを呼び出してセットスコアから合計スコアを計算
+      this.calculateTotalScore();
+      
+      const setA = (this.match.setScores && Array.isArray(this.match.setScores.A)) ? this.match.setScores.A : [];
+      const setB = (this.match.setScores && Array.isArray(this.match.setScores.B)) ? this.match.setScores.B : [];
+      let winsA = 0;
+      let winsB = 0;
+      for (let i = 0; i < Math.max(setA.length, setB.length); i++) {
+        const sA = parseInt(setA[i], 10);
+        const sB = parseInt(setB[i], 10);
+        if (isNaN(sA) || isNaN(sB)) continue; // スコア未入力のセットは無視
+
+        // 2set+10MTB 形式のファイナルセット（マッチタイブレーク）は 10ポイント先取かつ2ポイント差が必要
+        const isMatchTiebreak = (this.match.gameFormat === '4game2set' || this.match.gameFormat === '6game2set') && i === 2;
+        if (isMatchTiebreak) {
+          // 勝者判定条件: 10ポイント以上 & 2ポイント差
+          if ((sA >= 10 || sB >= 10) && Math.abs(sA - sB) >= 2) {
+            if (sA > sB) winsA++;
+            else if (sB > sA) winsB++;
+          }
+        } else {
+          // 通常セットの勝者判定 - 6G3setの場合は6ゲーム以上で2ゲーム差、または7-6の場合
+          if (this.match.gameFormat === '6game3set') {
+            // 6ゲーム先取、2ゲーム差必要、ただし7-6は勝利
+            if ((sA >= 6 && sA - sB >= 2) || (sA === 7 && sB === 6)) {
+              winsA++;
+            } else if ((sB >= 6 && sB - sA >= 2) || (sB === 7 && sA === 6)) {
+              winsB++;
+            }
+          } else if (this.match.gameFormat === '4game3set') {
+            // 4ゲーム先取、2ゲーム差必要、ただし5-4は勝利
+            if ((sA >= 4 && sA - sB >= 2) || (sA === 5 && sB === 4)) {
+              winsA++;
+            } else if ((sB >= 4 && sB - sA >= 2) || (sB === 5 && sA === 4)) {
+              winsB++;
+            }
+          } else {
+            // その他の形式は単純比較
+            if (sA > sB) winsA++;
+            else if (sB > sA) winsB++;
+          }
+        }
+      }
+      
+      let newWinner = null;
+      let newStatus = this.match.status;
+      
+      // 3セット制の場合は2セット先取で勝利
+      if (this.match.gameFormat === '6game3set' || this.match.gameFormat === '4game3set') {
+        if (winsA >= 2) {
+          newWinner = 'A';
+          newStatus = 'Win';
+        } else if (winsB >= 2) {
+          newWinner = 'B';
+          newStatus = 'Win';
+        }
+      } else if (this.match.gameFormat === '6game2set' || this.match.gameFormat === '4game2set') {
+        // 2セット制の場合も2セット先取で勝利（3セット目はマッチタイブレーク）
+        if (winsA >= 2) {
+          newWinner = 'A';
+          newStatus = 'Win';
+        } else if (winsB >= 2) {
+          newWinner = 'B';
+          newStatus = 'Win';
+        }
+      }
+      
+      showDebug('[DEBUG] BO3 - winsA: ' + winsA + ', winsB: ' + winsB + ', newWinner: ' + newWinner);
+      
+      // winner / status 更新判定
+      if (this.match.winner !== newWinner || this.match.status !== newStatus) {
+        const updatePayload = { winner: newWinner, status: newStatus };
+        if (newWinner && !this.match.actualEndTime) {
+          updatePayload.actualEndTime = new Date().toISOString();
+        } else if (!newWinner) {
+          updatePayload.actualEndTime = null; // 勝者取り消し時刻クリア
+        }
+        this.updateMatchData(updatePayload);
+        this.updateWinStatus();
+        this.updateEndTimeDisplay();
+      }
+      // BO3判定後は処理終了
+      return;
+    }
+
+    // 5G形式の勝者判定（合計5ゲーム到達で多い方が勝ち）
+    if (format.includes('5g') || this.match.gameFormat === '5game') {
+      if (scoreAEntered && scoreBEntered) {
+        const total = scoreA + scoreB;
+        let newWinner = null;
+        let newStatus = this.match.status;
+        if (total >= 5) {
+          if (scoreA > scoreB) newWinner = 'A';
+          else if (scoreB > scoreA) newWinner = 'B';
+          if (newWinner) newStatus = 'Win';
+        } else {
+          newWinner = null;
+          newStatus = 'Pending';
+        }
+        if (this.match.winner !== newWinner || this.match.status !== newStatus) {
+          const updatePayload = { winner: newWinner, status: newStatus };
+          if (newWinner && !this.match.actualEndTime) {
+            updatePayload.actualEndTime = new Date().toISOString();
+          } else if (!newWinner) {
+            updatePayload.actualEndTime = null;
+          }
+          this.updateMatchData(updatePayload);
+          this.updateWinStatus();
+          this.updateEndTimeDisplay();
+        }
+      }
+      // 5G判定後は続行せずに下の6G判定に落ちることなく終了
+      return;
+    }
+
+    // 8G1set形式の勝者判定
+    if (format.includes('8g') || format.includes('8game')) {
+      if (scoreAEntered && scoreBEntered) {
+        let newWinner = null;
+        let newStatus = this.match.status;
+        // 8ゲームかつ2ゲーム差
+        if ((scoreA >= 8 || scoreB >= 8) && Math.abs(scoreA - scoreB) >= 2) {
+          if (scoreA > scoreB) newWinner = 'A';
+          else if (scoreB > scoreA) newWinner = 'B';
+          if (newWinner) newStatus = 'Win';
+        }
+        // 9ゲーム到達で即勝利
+        else if (scoreA >= 9 || scoreB >= 9) {
+          if (scoreA > scoreB) newWinner = 'A';
+          else if (scoreB > scoreA) newWinner = 'B';
+          if (newWinner) newStatus = 'Win';
+        }
+        if (this.match.winner !== newWinner || this.match.status !== newStatus) {
+          const updatePayload = { winner: newWinner, status: newStatus };
+          if (newWinner && !this.match.actualEndTime) {
+            updatePayload.actualEndTime = new Date().toISOString();
+          } else if (!newWinner) {
+            updatePayload.actualEndTime = null;
+          }
+          this.updateMatchData(updatePayload);
+          this.updateWinStatus();
+          this.updateEndTimeDisplay();
+        }
+      }
+      // 8G判定後は処理終了
+      return;
+    }
+
+    // 4G1set形式の勝者判定
+    if (format.includes('4g') || format.includes('4game')) {
+      if (scoreAEntered && scoreBEntered) {
+        let newWinner = null;
+        let newStatus = this.match.status;
+        // 4ゲームかつ2ゲーム差
+        if ((scoreA >= 4 || scoreB >= 4) && Math.abs(scoreA - scoreB) >= 2) {
+          if (scoreA > scoreB) newWinner = 'A';
+          else if (scoreB > scoreA) newWinner = 'B';
+          if (newWinner) newStatus = 'Win';
+        }
+        // 5ゲーム到達で即勝利
+        else if (scoreA >= 5 || scoreB >= 5) {
+          if (scoreA > scoreB) newWinner = 'A';
+          else if (scoreB > scoreA) newWinner = 'B';
+          if (newWinner) newStatus = 'Win';
+        }
+        if (this.match.winner !== newWinner || this.match.status !== newStatus) {
+          const updatePayload = { winner: newWinner, status: newStatus };
+          if (newWinner && !this.match.actualEndTime) {
+            updatePayload.actualEndTime = new Date().toISOString();
+          } else if (!newWinner) {
+            updatePayload.actualEndTime = null;
+          }
+          this.updateMatchData(updatePayload);
+          this.updateWinStatus();
+          this.updateEndTimeDisplay();
+        }
+      }
+      // 4G判定後は処理終了
+      return;
+    }
+
+    // 6G1set形式の勝者判定
+    if (format.includes('6g') || format.includes('6game')) {
+      showDebug('[DEBUG] 6G1set判定: scoreA=' + scoreA + ' scoreB=' + scoreB);
+      
+      if (scoreAEntered && scoreBEntered) {
+        showDebug('[DEBUG] 両方のスコアが入力済み');
+        
+        // 6ゲーム到達かつ2ゲーム差
+        if ((scoreA >= 6 || scoreB >= 6) && Math.abs(scoreA - scoreB) >= 2) {
+          showDebug('[DEBUG] 6到達＆2差クリア');
+          if (scoreA > scoreB) {
+            newWinner = 'A';
+            newStatus = 'Win';
+          } else if (scoreB > scoreA) {
+            newWinner = 'B';
+            newStatus = 'Win';
+          }
+        }
+        // 7ゲーム到達で即勝利
+        else if (scoreA >= 7 || scoreB >= 7) {
+          showDebug('[DEBUG] 7到達で即勝利');
+          if (scoreA > scoreB) {
+            newWinner = 'A';
+            newStatus = 'Win';
+          } else if (scoreB > scoreA) {
+            newWinner = 'B';
+            newStatus = 'Win';
+          }
+        }
+      } else {
+        showDebug('[DEBUG] 両方のスコアが入力されていません');
+        // 片方のスコアしか入力されていない場合は勝者をクリア
+        newWinner = null;
+        newStatus = 'Pending';
+      }
+      
+      // 勝者・ステータス変更があればDB経由で一括更新（終了時刻含む）
+      if (this.match.winner !== newWinner || this.match.status !== newStatus) {
+        showDebug('[DEBUG] 勝者変更: ' + this.match.winner + ' → ' + newWinner);
+
+        const updatePayload = { winner: newWinner, status: newStatus };
+        // 勝者確定時に終了時刻を自動設定 / 取り消し時はクリア
+        if (newWinner && !this.match.actualEndTime) {
+          updatePayload.actualEndTime = new Date().toISOString();
+        } else if (!newWinner) {
+          updatePayload.actualEndTime = null;
+        }
+
+        // updateMatchData は DB 更新・UI 更新を内包するユーティリティ
+        this.updateMatchData(updatePayload);
+      }
+      
+      return; // 6G1set判定後は処理終了
+    }
+    
+    // その他の形式（元のコード）
+    if (this.match.gameFormat === 'league') {
+    const scoreA = parseInt(this.match.scoreA, 10) || 0;
+    let scoreB = parseInt(this.match.scoreB, 10) || 0;
+    showDebug('[DEBUG] scoreA: ' + scoreA + ', scoreB: ' + scoreB);
     let newWinner = null;
     let newStatus = this.match.status;
 
@@ -856,6 +1475,13 @@ update(newMatchData) {
     memoInput.value = this.match.memo;
   }
 
+  // スコア文字列 → セットスコア配列を同期（読み込み時のスコア消失防止）
+  const numSetsUpdate = this._getNumberOfSets();
+  this.match.setScores = {
+    A: this._parseScores(this.match.scoreA, numSetsUpdate),
+    B: this._parseScores(this.match.scoreB, numSetsUpdate)
+  };
+
   this.updateScoreInputsInteractivity();
   this.updateWinStatus();
   this.updateEndTimeDisplay();
@@ -992,4 +1618,90 @@ update(newMatchData) {
     // 機能を無効化したので何もしない
     return;
   } // addDoubleClickToHistoryListener method
+
+  // スコア取得メソッド - コート数変更時の状態保持用
+  getScoreA() {
+    if (this.element) {
+      // スコア入力欄を特定（プレイヤー名入力欄を除外）
+      const scoreInput = this.element.querySelector('input.score-input[data-player="A"], input.set-score-input[data-player="A"]');
+      if (scoreInput) {
+        // セットスコア形式の場合は合計スコアを取得
+        if (scoreInput.classList.contains('set-score-input')) {
+          const totalScoreElement = this.element.querySelector('.total-score[data-player="A"]');
+          const val = totalScoreElement ? totalScoreElement.textContent : '';
+          if (val !== '' && val != null) return val;
+        } else {
+          if (scoreInput.value !== '' && scoreInput.value != null) return scoreInput.value;
+        }
+      }
+    }
+    const scoreFallbackA = this.match.scoreA;
+    return (scoreFallbackA === undefined || scoreFallbackA === null) ? '' : String(scoreFallbackA);
+  }
+
+  getScoreB() {
+    if (this.element) {
+      // スコア入力欄を特定（プレイヤー名入力欄を除外）
+      const scoreInput = this.element.querySelector('input.score-input[data-player="B"], input.set-score-input[data-player="B"]');
+      if (scoreInput) {
+        // セットスコア形式の場合は合計スコアを取得
+        if (scoreInput.classList.contains('set-score-input')) {
+          const totalScoreElement = this.element.querySelector('.total-score[data-player="B"]');
+          const val = totalScoreElement ? totalScoreElement.textContent : '';
+          if (val !== '' && val != null) return val;
+        } else {
+          if (scoreInput.value !== '' && scoreInput.value != null) return scoreInput.value;
+        }
+      }
+    }
+    const scoreFallbackB = this.match.scoreB;
+    return (scoreFallbackB === undefined || scoreFallbackB === null) ? '' : String(scoreFallbackB);
+  }
+
+  getTiebreakScore() {
+    if (this.element) {
+      const tiebreakInputA = this.element.querySelector('input[data-tiebreak="A"]');
+      const tiebreakInputB = this.element.querySelector('input[data-tiebreak="B"]');
+      return {
+        A: tiebreakInputA ? tiebreakInputA.value : (this.match.tieBreakA || ''),
+        B: tiebreakInputB ? tiebreakInputB.value : (this.match.tieBreakB || '')
+      };
+    }
+    return {
+      A: this.match.tieBreakA || '',
+      B: this.match.tieBreakB || ''
+    };
+  }
+
+  // セットスコアを取得
+  getSetScores() {
+    const setScores = { A: [], B: [] };
+    const numSetsExpected = this._getNumberOfSets();
+    if (this.element) {
+      const setInputsA = this.element.querySelectorAll('input[data-set-player="A"]');
+      const setInputsB = this.element.querySelectorAll('input[data-set-player="B"]');
+      
+      setInputsA.forEach((input, index) => {
+        if (index < numSetsExpected) {
+          setScores.A[index] = input.value || null;
+        }
+      });
+      
+      setInputsB.forEach((input, index) => {
+        if (index < numSetsExpected) {
+          setScores.B[index] = input.value || null;
+        }
+      });
+      // 期待される数に合わせてトリム / パディング
+      setScores.A = setScores.A.slice(0, numSetsExpected);
+      setScores.B = setScores.B.slice(0, numSetsExpected);
+      while (setScores.A.length < numSetsExpected) setScores.A.push(null);
+      while (setScores.B.length < numSetsExpected) setScores.B.push(null);
+    } else {
+      // フォールバック: match.setScoresから取得
+      setScores.A = this.match.setScores?.A || [];
+      setScores.B = this.match.setScores?.B || [];
+    }
+    return setScores;
+  }
 } // MatchCard CLASS END
