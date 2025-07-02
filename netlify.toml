@@ -1,6 +1,5 @@
 [build]
-  publish = "." # ルートディレクトリを公開
-  command = "# ビルドコマンドは現時点では不要"
+  publish = "dist-web" # ルートディレクトリを公開
 
 [dev]
   command = "node server.js" # ローカル開発時のコマンド
