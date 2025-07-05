@@ -780,9 +780,7 @@ class Board {
 
   // Add a new match to the board
   addMatch(match) {
-    if (match.courtNumber && match.rowPosition) {
-      this.createAndPlaceMatchCard(match);
-    }
+    // 何もしない
   }
 
   getOccupiedRowPositions(courtNumber) {

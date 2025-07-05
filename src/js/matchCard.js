@@ -965,9 +965,57 @@ updateDynamicElements() {
 }
 
 updateScoreInputsInteractivity() {
-  // スコア入力のインタラクティビティに関するロジックがあればここに追加
-  // 古いタイブレーク入力欄のコードは削除済み
+  // プレイヤー名入力欄
+  const playerInputs = this.element.querySelectorAll('.player-name-input');
+  const scoreInputs = this.element.querySelectorAll('.score-input');
+  const setScoreInputs = this.element.querySelectorAll('.set-score-input');
+  let firstFocusable = null;
+
+  playerInputs.forEach(input => {
+    input.disabled = false;
+    input.readOnly = false;
+    input.style.pointerEvents = 'auto';
+    input.style.cursor = 'text';
+    input.tabIndex = 0;
+    if (!firstFocusable) firstFocusable = input;
+  });
+  scoreInputs.forEach(input => {
+    input.disabled = false;
+    input.readOnly = false;
+    input.style.pointerEvents = 'auto';
+    input.style.cursor = 'text';
+    input.tabIndex = 0;
+    if (!firstFocusable) firstFocusable = input;
+  });
+  setScoreInputs.forEach(input => {
+    input.disabled = false;
+    input.readOnly = false;
+    input.style.pointerEvents = 'auto';
+    input.style.cursor = 'text';
+    input.tabIndex = 0;
+    if (!firstFocusable) firstFocusable = input;
+  });
+  if (this.tieBreakScoreInput) {
+    this.tieBreakScoreInput.disabled = false;
+    this.tieBreakScoreInput.readOnly = false;
+    this.tieBreakScoreInput.style.pointerEvents = 'auto';
+    this.tieBreakScoreInput.style.cursor = 'text';
+    this.tieBreakScoreInput.tabIndex = 0;
+    // スコア条件で表示切替（例: playoff形式7-6/6-7）
+    const scoreA = parseInt(this.match.scoreA) || 0;
+    const scoreB = parseInt(this.match.scoreB) || 0;
+    if (this.match.gameFormat === 'playoff' &&
+        ((scoreA === 7 && scoreB === 6) || (scoreA === 6 && scoreB === 7))) {
+      this.tieBreakScoreInput.style.display = 'inline-block';
+    } else {
+      this.tieBreakScoreInput.style.display = 'none';
+      if (this.match.tieBreakScore !== undefined && this.match.tieBreakScore !== '') {
+        this.match.tieBreakScore = '';
+      }
+    }
+  }
 }
+
 
 updateEndTimeDisplay() {
     const endTimeInput = this.element.querySelector('.match-end-time-input');
@@ -1000,6 +1048,7 @@ async updateMatchData(updatedData) {
     }
     this.updateWinStatus();
     this.updateEndTimeDisplay();
+    // 遅延なしで即時有効化
     this.updateScoreInputsInteractivity();
     this.checkLeagueWinCondition(); // スコアや試合形式変更後に勝敗条件を再チェック
 }
@@ -1463,25 +1512,26 @@ update(newMatchData) {
     playerBInput.value = this.match.playerB;
   }
   const scoreAInput = this.element.querySelector('.score-input[data-player="A"]');
-  if (scoreAInput && parseInt(scoreAInput.value) !== this.match.scoreA) {
-    scoreAInput.value = this.match.scoreA;
-  }
+  if (scoreAInput) scoreAInput.value = this.match.scoreA;
   const scoreBInput = this.element.querySelector('.score-input[data-player="B"]');
-  if (scoreBInput && parseInt(scoreBInput.value) !== this.match.scoreB) {
-    scoreBInput.value = this.match.scoreB;
-  }
+  if (scoreBInput) scoreBInput.value = this.match.scoreB;
   const memoInput = this.element.querySelector('.match-card-memo');
   if (memoInput && memoInput.value !== this.match.memo) {
     memoInput.value = this.match.memo;
   }
-
-  // スコア文字列 → セットスコア配列を同期（読み込み時のスコア消失防止）
-  const numSetsUpdate = this._getNumberOfSets();
-  this.match.setScores = {
-    A: this._parseScores(this.match.scoreA, numSetsUpdate),
-    B: this._parseScores(this.match.scoreB, numSetsUpdate)
-  };
-
+  if (this.match.setScores) {
+    for (let i = 0; i < this.match.setScores.A.length; i++) {
+      const setScoreInputA = this.element.querySelector(`.set-score-input[data-player="A"][data-set="${i}"]`);
+      const setScoreInputB = this.element.querySelector(`.set-score-input[data-player="B"][data-set="${i}"]`);
+      if (setScoreInputA) setScoreInputA.value = this.match.setScores.A[i] || '';
+      if (setScoreInputB) setScoreInputB.value = this.match.setScores.B[i] || '';
+    }
+  }
+  if (this.match.tieBreakScore !== undefined) {
+    const tieBreakInput = this.element.querySelector('.tiebreak-score-input');
+    if (tieBreakInput) tieBreakInput.value = this.match.tieBreakScore;
+  }
+  // 遅延なしで即時有効化
   this.updateScoreInputsInteractivity();
   this.updateWinStatus();
   this.updateEndTimeDisplay();

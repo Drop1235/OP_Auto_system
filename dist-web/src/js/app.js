@@ -94,6 +94,26 @@ document.addEventListener('DOMContentLoaded', () => {
     setCurrentTournamentId(e.target.value);
     window.location.reload(); // 大会切り替え時に全リロード（後で最適化可）
   });
+  // 「更新」ボタンのクリックイベント
+  const refreshBtn = document.getElementById('refresh-btn');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      // ページ全体をリロード（キャッシュを無視して強制リロード）
+      if (typeof window.location.reload === 'function') {
+        // `true` はレガシー仕様のため try-catch でフォールバック
+        try {
+          window.location.reload(true);
+        } catch (_) {
+          window.location.reload();
+        }
+      } else {
+        // Fallback for environments like certain Electron versions
+        window.location.href = window.location.href;
+      }
+    });
+  }
+
   // 大会削除機能
   const deleteTournamentBtn = document.getElementById('delete-tournament-btn');
   deleteTournamentBtn.addEventListener('click', () => {
@@ -428,28 +448,14 @@ document.addEventListener('DOMContentLoaded', () => {
           rowPosition: position || null
         };
         
-        // Add match to database
-        console.log('[APP] Adding match to database:', newMatch);
+                // メモリDBに保存し、戻り値（ID付き）を取得
         const addedMatch = await db.addMatch(newMatch);
-        console.log('[APP] Match added to database, returned match:', addedMatch);
-        
-        // 確認のため、board オブジェクトが存在するか確認
-        console.log('[APP] Before event dispatch - Board object exists:', !!window.board);
-        console.log('[APP] Board object details:', window.board);
-        console.log('[APP] Board methods:', Object.getOwnPropertyNames(window.board.__proto__));
+        console.log('[APP] Match added to Memory DB:', addedMatch);
         
         // Dispatch event to notify board of new match
         const addEvent = new CustomEvent('match-added', {
           detail: { match: addedMatch }
         });
-        console.log('[APP] Dispatching match-added event for match ID:', addedMatch.id, addedMatch);
-        
-        // イベント発行前にイベントリスナーが登録されているか確認
-        const listeners = window.board && typeof window.board._checkEventListeners === 'function' 
-          ? window.board._checkEventListeners('match-added') 
-          : 'Cannot check event listeners';
-        console.log('[APP] Event listeners for match-added:', listeners);
-        
         document.dispatchEvent(addEvent);
         console.log('[APP] Event dispatched');
         

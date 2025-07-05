@@ -94,6 +94,14 @@ document.addEventListener('DOMContentLoaded', () => {
     setCurrentTournamentId(e.target.value);
     window.location.reload(); // 大会切り替え時に全リロード（後で最適化可）
   });
+  // 「更新」ボタンのクリックイベント
+  const refreshBtn = document.getElementById('refresh-btn');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', () => {
+      window.location.reload();
+    });
+  }
+
   // 大会削除機能
   const deleteTournamentBtn = document.getElementById('delete-tournament-btn');
   deleteTournamentBtn.addEventListener('click', () => {
