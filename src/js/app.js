@@ -531,6 +531,86 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
+  // -----------------------------
+  // Supabase 連携設定
+  // -----------------------------
+  let supabaseClient = null;
+  async function getSupabaseClient() {
+    if (supabaseClient) return supabaseClient;
+    try {
+      // 1) 既にグローバルsupabaseがある場合（CDNスクリプト読込済み）
+      let createClientFn = null;
+      if (window.supabase && typeof window.supabase.createClient === 'function') {
+        createClientFn = window.supabase.createClient;
+      } else {
+        // 2) ESM CDNから動的import
+        const supabaseModule = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
+        createClientFn = supabaseModule.createClient;
+      }
+      const { SUPABASE_URL, SUPABASE_ANON_KEY } = await import('./supabase-config.js');
+    console.log('[DEBUG] SUPABASE_URL:', SUPABASE_URL);
+    console.log('[DEBUG] SUPABASE_ANON_KEY:', SUPABASE_ANON_KEY);
+    // --- Validation ---
+    if (!SUPABASE_URL || SUPABASE_URL.startsWith('ここに') || !/^https?:\/\//.test(SUPABASE_URL)) {
+      alert('Supabase URL が設定されていません。supabase-config.js で正しい URL を設定してください。');
+      throw new Error('Invalid Supabase URL');
+    }
+    if (!SUPABASE_ANON_KEY || SUPABASE_ANON_KEY.startsWith('ここに')) {
+      alert('Supabase ANON KEY が設定されていません。supabase-config.js で正しいキーを設定してください。');
+      throw new Error('Invalid Supabase ANON KEY');
+    }
+
+    supabaseClient = createClientFn(SUPABASE_URL, SUPABASE_ANON_KEY);
+    return supabaseClient;
+    } catch (error) {
+      console.error('[公開] Supabaseクライアント初期化失敗:', error);
+      alert('Supabaseクライアントの初期化に失敗しました。設定を確認してください。');
+      throw error;
+    }
+  }
+
+  // 公開ボタン処理
+  const publishBtn = document.getElementById('publish-btn');
+  if (publishBtn) {
+    publishBtn.addEventListener('click', async () => {
+      // localStorageに保存されている大会データキーを探索
+      let matchData = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('tennisTourn')) {
+          try {
+            const parsed = JSON.parse(localStorage.getItem(key));
+            if (parsed && Array.isArray(parsed.matches)) {
+              matchData = parsed.matches;
+              break;
+            }
+          } catch (e) {
+            console.warn('[公開] キー', key, 'のパースに失敗:', e);
+          }
+        }
+      }
+      console.log('[公開] 抽出したmatchData配列の長さ:', matchData.length);
+      console.log('[公開] 現在のmatchData:', matchData);
+
+      try {
+        const supabase = await getSupabaseClient();
+        // Supabase にデータを送信
+        const { error } = await supabase.from('match_data').insert([
+          { data: matchData }
+        ]);
+        if (error) {
+          console.error('[公開] Supabase への保存エラー:', error);
+          alert('データの公開に失敗しました: ' + error.message);
+        } else {
+          alert('データを公開しました！');
+        }
+      } catch (e) {
+        // getSupabaseClient 内でエラー処理・アラート済み
+        console.error('[公開] 処理中に例外:', e);
+      }
+    });
+  }
+
   console.log('[APP] Application initialization complete');
 });
 

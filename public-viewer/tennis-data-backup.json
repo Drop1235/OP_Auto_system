@@ -1,0 +1,44 @@
+{
+  "tournaments": [
+    {
+      "id": "default-1751620120232",
+      "name": "デフォルト大会"
+    }
+  ],
+  "matches": [
+    {
+      "id": 1,
+      "playerA": "sss",
+      "playerB": "sss",
+      "gameFormat": "5game",
+      "actualStartTime": null,
+      "actualEndTime": null,
+      "status": "Current",
+      "courtNumber": 1,
+      "rowPosition": "current",
+      "scoreA": "",
+      "scoreB": "",
+      "setScores": {
+        "A": [
+          null
+        ],
+        "B": [
+          null
+        ]
+      },
+      "tieBreakA": "",
+      "tieBreakB": "",
+      "winner": null,
+      "memo": "",
+      "tiebreakScore": null,
+      "createdAt": "2025-07-04T09:08:48.764Z"
+    }
+  ],
+  "players": {},
+  "currentTournament": {
+    "id": "default-1751620120232",
+    "name": "デフォルト大会"
+  },
+  "currentTournamentId": "default-1751620120232",
+  "exportDate": "2025-07-04T09:08:52.511Z"
+}

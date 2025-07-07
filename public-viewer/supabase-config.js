@@ -1,0 +1,3 @@
+// 閲覧専用ビューア用Supabase設定
+export const SUPABASE_URL = 'https://kdusywgpzlmuglsntpzg.supabase.co';
+export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkdXN5d2dwemxtdWdsc250cHpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE4NTYzODcsImV4cCI6MjA2NzQzMjM4N30.Zo3AvZ-1EHCmLrCWm-soQNR1R1GTZCOtyOv3VJp_An0';

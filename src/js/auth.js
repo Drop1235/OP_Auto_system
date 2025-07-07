@@ -57,18 +57,15 @@ function addDataManagementButtons() {
   infoButton.innerHTML = '📊 データ情報';
   infoButton.title = 'ストレージ使用量を表示';
   
-  // ボタンをナビゲーションに追加
+  // ボタンをナビゲーションに追加（ステータスインジケータのみ）
   nav.appendChild(statusIndicator);
-  nav.appendChild(saveButton);
-  nav.appendChild(loadButton);
-  nav.appendChild(infoButton);
   
   // オンライン/オフライン状態の監視
   window.addEventListener('online', () => updateConnectionStatus(statusIndicator));
   window.addEventListener('offline', () => updateConnectionStatus(statusIndicator));
   
-  // イベントリスナーを追加
-  setupDataManagementEvents();
+  // データ保存・読込・情報ボタンは不要のため追加しない
+  return;
 }
 
 // オンライン/オフライン状態を更新する関数
