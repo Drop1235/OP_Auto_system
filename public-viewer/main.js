@@ -114,6 +114,8 @@ function createMatchCard(match) {
   if (matchData.length === 0) {
     alert('表示できる試合データが見つかりませんでした。管理画面から「📤 最新情報を公開」するか、public-viewer フォルダに backup JSON を置いてください。');
   }
+  // 履歴へ移動した試合は除外（status が 'Completed' または 'History' のものを除く）
+  matchData = matchData.filter(m => !m.status || (m.status !== 'Completed' && m.status !== 'History'));
   console.log('[VIEWER] 最終的に使用するmatchData:', matchData);
   renderCourts(matchData);
 })();
