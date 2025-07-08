@@ -1,8 +1,9 @@
 {
+  "type": "module",
   "name": "tennis-tournament-board",
   "version": "1.1.0",
   "description": "Tennis Tournament Match Board Application with Password Protection",
-  "main": "main.js",
+  "main": "electron-main.js",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder",
@@ -17,7 +18,8 @@
   },
   "dependencies": {
     "electron-squirrel-startup": "^1.0.1",
-    "electron-store": "^8.1.0"
+    "electron-store": "^8.1.0",
+    "@supabase/supabase-js": "^2.39.5"
   },
   "build": {
     "appId": "com.tennis.tournamentboard",
