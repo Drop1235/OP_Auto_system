@@ -3,182 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MatchDrop - テニストーナメント対戦表</title>
-  <link rel="stylesheet" href="src/css/styles.css">
-  <link rel="stylesheet" href="src/css/tournament-modal.css">
-  <!-- ローカルストレージマネージャー -->
-  <script src="src/js/local-storage.js"></script>
-  <link rel="icon" href="assets/icon.png">
-
+  <title>テニス大会 閲覧専用ビューア</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- 新規大会名入力モーダル -->
-  <div id="tournament-modal">
-    <div class="modal-content">
-      <h2>新規大会作成</h2>
-      <label for="tournament-name-input">大会名を入力してください</label>
-      <input type="text" id="tournament-name-input" maxlength="30" autocomplete="off" />
-      <div class="modal-btns">
-        <button class="ok-btn" id="tournament-modal-ok">OK</button>
-        <button class="cancel-btn" id="tournament-modal-cancel">キャンセル</button>
-      </div>
+  <div id="main-container">
+    <h1>テニス大会 閲覧専用ビューア</h1>
+    <div id="courts-container" class="courts-layout">
+      <!-- 各コートのカードがここに表示される -->
+    </div>
+    <div id="unassigned-matches" class="unassigned-matches">
+      <div class="unassigned-title">未割当の試合</div>
+      <div id="unassigned-list"></div>
     </div>
   </div>
-
-  <header>
-    <div class="app-brand">
-      <img src="assets/icon.png" alt="MatchDrop icon" class="logo-icon">
-      <span class="app-name">MatchDrop</span>
-
-    </div>
-    <nav style="display: flex; align-items: center; gap: 8px;">
-      <button id="board-view-btn" class="active">対戦表</button>
-      <button id="history-view-btn">試合履歴</button>
-      <label for="tournament-select" style="margin-left: 16px;">大会:</label>
-      <select id="tournament-select" style="min-width: 150px;"></select>
-      <button id="add-tournament-btn" style="background-color: #2196f3; color: #fff;">新規大会</button>
-      <button id="delete-tournament-btn" title="大会を削除" style="background: none; border: none; cursor: pointer; font-size: 1.3em; color: #f44336; padding: 0 8px;">🗑️</button>
-      <button id="refresh-btn" style="background-color: #4caf50; color: #fff;">更新</button>
-      <button id="publish-btn" style="margin-left: 8px; background-color: #ff9800; color:#fff;">公開</button>
-      <button id="logout-btn" style="margin-left: 8px; background-color: #f44336;">ログアウト</button>
-    </nav>
-  </header>
-
-  <main>
-    <!-- Board View -->
-    <section id="board-view" class="active-view">
-      <!-- コート設定セクション -->
-      <div id="court-settings" class="court-settings">
-        <div class="court-settings-header">
-          <button id="add-match-btn" class="add-match-btn-prominent">試合追加</button>
-          <div class="court-count-controls" style="margin-left:auto; margin-right:8px;">
-            <button id="decrease-courts-btn">-</button>
-            <span id="court-count-display" class="court-count-display">12</span>
-            <button id="increase-courts-btn">+</button>
-          </div>
-          
-          <!-- エクスポートボタン -->
-          <div class="export-controls" style="margin-right:8px;">
-            <select id="board-export-type" style="margin-right:4px;">
-              <option value="csv">CSV形式</option>
-              <option value="screenshot">スクリーンショット</option>
-            </select>
-            <button id="board-export-btn" class="export-btn">書き出し</button>
-          </div>
-          
-          <button id="delete-all-matches-btn" class="delete-all-btn">全削除</button>
-      </div>
-      <div id="court-grid" class="court-grid"></div>
-      
-      <!-- 未割当のカード用の枠 -->
-      <div class="unassigned-section">
-        <div class="unassigned-header">未割当の試合</div>
-        <div id="unassigned-cards" class="unassigned-cards">
-          <!-- 未割当のカードがここに表示されます -->
-        </div>
-      </div>
-    </section>
-
-    <!-- History View -->
-    <section id="history-view" class="hidden-view">
-      <div class="filter-controls">
-        <div class="filter-group">
-          <label for="court-filter">コート:</label>
-          <select id="court-filter">
-            <option value="all">全コート</option>
-            <!-- Courts will be populated dynamically -->
-          </select>
-        </div>
-        <div class="filter-group">
-          <label for="date-filter">日付:</label>
-          <input type="date" id="date-filter">
-          <button id="clear-date-filter">クリア</button>
-        </div>
-        </div>
-      </div>
-      
-      <!-- カードビューモード (これが唯一の表示モードになる) -->
-      <div id="history-card-view" class="history-card-view">
-        <div id="history-court-grid" class="court-grid history-court-grid">
-          <!-- 履歴コートグリッドが動的に生成されます -->
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <!-- Add Match Modal -->
-  <div id="add-match-modal" class="modal">
-    <div class="modal-content">
-      <span class="close-modal">&times;</span>
-      <h2>新規試合追加</h2>
-      <form id="add-match-form">
-        <div class="form-group">
-          <label>試合形式:</label>
-          <select id="game-format-select" name="game-format" class="form-control">
-            <option value="5game">5G</option>
-            <option value="4game1set">4G1set</option>
-            <option value="6game1set">6G1set</option>
-            <option value="8game1set">8G-Pro</option>
-            <option value="4game2set">4G2set+10MTB</option>
-            <option value="6game2set">6G2set+10MTB</option>
-            <option value="4game3set">4G3set</option>
-            <option value="6game3set">6G3set</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="player-a">選手A:</label>
-          <input type="text" id="player-a" required>
-        </div>
-        <div class="form-group">
-          <label for="player-b">選手B:</label>
-          <input type="text" id="player-b" required>
-        </div>
-        <div class="form-group">
-          <label for="court-select">コート (任意):</label>
-          <select id="court-select">
-            <option value="">未割当</option>
-            <!-- Courts will be populated dynamically -->
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="position-select">位置 (任意):</label>
-          <select id="position-select">
-            <option value="">未割当</option>
-            <option value="current">現在の試合</option>
-            <option value="next">次の試合</option>
-            <option value="next2">次々の試合</option>
-          </select>
-        </div>
-        <button type="submit">追加</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- html2canvas for screenshot functionality -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  
-  <!-- ローカルストレージマネージャーを最初に読み込み -->
-  <script>
-    console.log('[INIT] Loading LocalStorageManager...');
-  </script>
-  
-  <!-- 1. Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-  <script src="src/js/firebase-config.js"></script>
-
-  <script src="src/js/favicon.js"></script>
-  <script src="src/js/database.js"></script>
-  <script src="src/js/matchCard.js"></script>
-  <script src="src/js/board.js"></script>
-  <script src="src/js/history.js"></script>
-  <script src="src/js/app.js"></script>
-  <script src="src/js/auth.js"></script>
-  
-  <!-- For web-only version (will be removed in Electron build) -->
-  <footer class="web-footer">
-    <p>テニストーナメント対戦表 - ウェブ版</p>
-    <p><small>これはスタンドアロンウェブ版です。オフラインでの使用にはElectronアプリをダウンロードしてください。</small></p>
-  </footer>
+  <script type="module" src="main.js"></script>
 </body>
 </html>
