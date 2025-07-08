@@ -42,20 +42,24 @@ async function fetchLatestMatchData() {
 
 // コートごとのカードを描画
 function renderCourts(matchData) {
-  const courts = [[], [], []]; // コート1,2,3
+  // 動的にコート数を算出
+  const maxCourt = Math.max(...matchData.map(m => Number.isFinite(m.courtNumber) ? m.courtNumber : 0), 0);
+  const courts = Array.from({ length: maxCourt }, () => []);
   const unassigned = [];
 
   // コート割当と未割当を分類
   for (const match of matchData) {
-    if (match.courtNumber === 1) courts[0].push(match);
-    else if (match.courtNumber === 2) courts[1].push(match);
-    else if (match.courtNumber === 3) courts[2].push(match);
-    else unassigned.push(match);
+    const cNum = Number(match.courtNumber);
+    if (Number.isInteger(cNum) && cNum >= 1 && cNum <= courts.length) {
+      courts[cNum - 1].push(match);
+    } else {
+      unassigned.push(match);
+    }
   }
 
   const container = document.getElementById('courts-container');
   container.innerHTML = '';
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < courts.length; i++) {
     const col = document.createElement('div');
     col.className = 'court-column';
     col.innerHTML = `<div class="court-title">コート${i+1}</div>`;
