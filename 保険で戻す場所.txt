@@ -1,0 +1,11 @@
+リポジトリ Drop1235/OP_Auto_system を
+タグ  stable-20250708（コミット 4464b35） の状態に完全に戻したいです。
+
+1. カレント作業ブランチで未コミットの変更があれば stash してください。
+2. タグのコミットを checkout した新ブランチ restore-20250708 を作成してください。
+3. npm install を実行して依存を整えたうえで
+   • Electron 版 → npm start
+   • Web 版     → npx http-server dist-web -p 8080
+   を起動確認できるようにしてください。
+
+必要な git / npm コマンドを順に提案してください。

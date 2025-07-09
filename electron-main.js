@@ -1,5 +1,10 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'node:path';
+import { fileURLToPath } from 'url';
+
+// __dirname / __filename Polyfill for ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // 禁止 multiple instance
 if (!app.requestSingleInstanceLock()) {
@@ -13,15 +18,14 @@ function createMainWindow() {
     width: 1280,
     height: 800,
     webPreferences: {
-      // フロントは通常のブラウザコンテキストとして動作させる
-      contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js'), // 任意。なければ無視される
-      nodeIntegration: false,
+      contextIsolation: false,
+      nodeIntegration: true,
+      enableRemoteModule: false,
     },
   });
 
-  // index.html（管理画面）を読み込む
-  mainWindow.loadFile(path.join(__dirname, 'index.html'));
+  // dist-web/index.html（管理画面フル機能版）を読み込む
+  mainWindow.loadFile(path.join(__dirname, 'dist-web', 'index.html'));
 
   mainWindow.on('closed', () => {
     mainWindow = null;

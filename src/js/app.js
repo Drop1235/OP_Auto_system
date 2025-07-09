@@ -8,20 +8,16 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // 大会リスト取得・保存用
-  function getTournaments() {
+  // ==== ユーティリティ関数（大会管理） ====
+  const getTournaments = () => {
     const t = localStorage.getItem('tournaments');
     return t ? JSON.parse(t) : [];
-  }
-  function saveTournaments(tournaments) {
+  };
+  const saveTournaments = tournaments => {
     localStorage.setItem('tournaments', JSON.stringify(tournaments));
-  }
-  function getCurrentTournamentId() {
-    return localStorage.getItem('currentTournamentId');
-  }
-  function setCurrentTournamentId(id) {
-    localStorage.setItem('currentTournamentId', id);
-  }
+  };
+  const getCurrentTournamentId = () => localStorage.getItem('currentTournamentId');
+  const setCurrentTournamentId = id => localStorage.setItem('currentTournamentId', id);
 
   // 大会リスト初期化
   let tournaments = getTournaments();
@@ -48,21 +44,22 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   updateTournamentSelect();
 
-  // 新規大会名入力モーダル制御
+  // ==== DOM取得（まとめて宣言） ====
   const tournamentModal = document.getElementById('tournament-modal');
   const tournamentNameInput = document.getElementById('tournament-name-input');
   const tournamentModalOk = document.getElementById('tournament-modal-ok');
   const tournamentModalCancel = document.getElementById('tournament-modal-cancel');
 
-  function openTournamentModal() {
+  // ==== モーダル制御 ====
+  const openTournamentModal = () => {
     tournamentModal.classList.add('active');
     tournamentNameInput.value = '';
     setTimeout(() => tournamentNameInput.focus(), 100);
-  }
-  function closeTournamentModal() {
+  };
+  const closeTournamentModal = () => {
     tournamentModal.classList.remove('active');
     tournamentNameInput.value = '';
-  }
+  };
 
   addTournamentBtn.addEventListener('click', () => {
     openTournamentModal();
@@ -94,13 +91,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setCurrentTournamentId(e.target.value);
     window.location.reload(); // 大会切り替え時に全リロード（後で最適化可）
   });
-  // 「更新」ボタンのクリックイベント
-  const refreshBtn = document.getElementById('refresh-btn');
-  if (refreshBtn) {
-    refreshBtn.addEventListener('click', () => {
-      window.location.reload();
-    });
-  }
 
   // 大会削除機能
   const deleteTournamentBtn = document.getElementById('delete-tournament-btn');
@@ -570,46 +560,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // 公開ボタン処理
-  const publishBtn = document.getElementById('publish-btn');
-  if (publishBtn) {
-    publishBtn.addEventListener('click', async () => {
-      // localStorageに保存されている大会データキーを探索
-      let matchData = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('tennisTourn')) {
-          try {
-            const parsed = JSON.parse(localStorage.getItem(key));
-            if (parsed && Array.isArray(parsed.matches)) {
-              matchData = parsed.matches;
-              break;
-            }
-          } catch (e) {
-            console.warn('[公開] キー', key, 'のパースに失敗:', e);
-          }
-        }
-      }
-      console.log('[公開] 抽出したmatchData配列の長さ:', matchData.length);
-      console.log('[公開] 現在のmatchData:', matchData);
 
-      try {
-        const supabase = await getSupabaseClient();
-        // Supabase にデータを送信
-        const { error } = await supabase.from('match_data').insert([
-          { data: matchData }
-        ]);
-        if (error) {
-          console.error('[公開] Supabase への保存エラー:', error);
-          alert('データの公開に失敗しました: ' + error.message);
-        } else {
-          alert('データを公開しました！');
-        }
-      } catch (e) {
-        // getSupabaseClient 内でエラー処理・アラート済み
-        console.error('[公開] 処理中に例外:', e);
-      }
-    });
-  }
 
   console.log('[APP] Application initialization complete');
 });

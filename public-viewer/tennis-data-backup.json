@@ -1,44 +1,50 @@
-{
-  "tournaments": [
-    {
-      "id": "default-1751620120232",
-      "name": "デフォルト大会"
-    }
-  ],
-  "matches": [
-    {
-      "id": 1,
-      "playerA": "sss",
-      "playerB": "sss",
-      "gameFormat": "5game",
-      "actualStartTime": null,
-      "actualEndTime": null,
-      "status": "Current",
-      "courtNumber": 1,
-      "rowPosition": "current",
-      "scoreA": "",
-      "scoreB": "",
-      "setScores": {
-        "A": [
-          null
-        ],
-        "B": [
-          null
-        ]
-      },
-      "tieBreakA": "",
-      "tieBreakB": "",
-      "winner": null,
-      "memo": "",
-      "tiebreakScore": null,
-      "createdAt": "2025-07-04T09:08:48.764Z"
-    }
-  ],
-  "players": {},
-  "currentTournament": {
-    "id": "default-1751620120232",
-    "name": "デフォルト大会"
+[
+  {
+    "playerA": "aaa",
+    "playerB": "aaa",
+    "gameFormat": "6game1set",
+    "status": "Win",
+    "courtNumber": 1,
+    "rowPosition": "current",
+    "id": 1,
+    "setScores": {
+      "A": [
+        null
+      ],
+      "B": [
+        null
+      ]
+    },
+    "scoreA": 4,
+    "scoreB": 6,
+    "winner": "B",
+    "memo": "",
+    "tieBreakA": "",
+    "tieBreakB": "",
+    "actualEndTime": "2025-07-08T12:59:37.800Z"
   },
-  "currentTournamentId": "default-1751620120232",
-  "exportDate": "2025-07-04T09:08:52.511Z"
-}
+  {
+    "playerA": "tttRRR",
+    "playerB": "ttt",
+    "gameFormat": "6game1set",
+    "status": "Win",
+    "courtNumber": 2,
+    "rowPosition": "current",
+    "id": 2,
+    "setScores": {
+      "A": [
+        null
+      ],
+      "B": [
+        null
+      ]
+    },
+    "scoreA": 6,
+    "scoreB": 1,
+    "winner": "A",
+    "memo": "",
+    "tieBreakA": "",
+    "tieBreakB": "",
+    "actualEndTime": "2025-07-08T13:18:08.980Z"
+  }
+]
