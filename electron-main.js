@@ -17,8 +17,18 @@ let mainWindow;
 // -----------------------------------------------------------------------------
 // IPC: "publish-site" -> Run update.js to push static site and deploy via Netlify
 // -----------------------------------------------------------------------------
-ipcMain.handle('publish-site', async () => {
-  // Capture screenshot of current window and save to dist-web/screenshot.png
+ipcMain.handle('publish-site', async (event, boardHtml) => {
+  // Save board-view.html received from renderer
+  try {
+    if (typeof boardHtml === 'string') {
+      const fs = await import('node:fs/promises');
+      const htmlPath = path.join(__dirname, 'dist-web', 'board-view.html');
+      await fs.writeFile(htmlPath, boardHtml, 'utf8');
+      console.log('board-view.html saved to', htmlPath);
+    }
+  } catch (e) {
+    console.error('Failed to write board-view.html', e);
+  }
   try {
     if (mainWindow && !mainWindow.isDestroyed()) {
       const image = await mainWindow.capturePage();
