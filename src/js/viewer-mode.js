@@ -2,6 +2,11 @@
 // Hide admin / edit UI when running in a pure browser (Netlify) environment.
 if (!window.require) {
   window.addEventListener('DOMContentLoaded', () => {
+    // Show screenshot container, hide main content
+    const ss = document.getElementById('screenshot-container');
+    if (ss) ss.style.display = 'block';
+    const mainEl = document.querySelector('main');
+    if (mainEl) mainEl.style.display = 'none';
     const adminIds = [
       'add-match-btn',
       'decrease-courts-btn',
