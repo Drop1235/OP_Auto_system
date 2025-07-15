@@ -42,7 +42,7 @@ ipcMain.handle('publish-site', async (event, boardHtml) => {
   }
   return await new Promise((resolve, reject) => {
     try {
-      const scriptPath = path.join(__dirname, 'update.js');
+      const scriptPath = path.join(__dirname, 'update.cjs');
       const distWebPath = path.join(__dirname, 'dist-web');
       const proc = spawn(process.execPath, [scriptPath, distWebPath], {
         cwd: __dirname,
