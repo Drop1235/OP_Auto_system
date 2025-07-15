@@ -63,35 +63,6 @@ if (window.require) {
   deployToNetlify = async () => {
     throw new Error('ブラウザ環境では公開処理は利用できません (Electron 版をご利用ください)');
   };
-
-  // =============================
-  // 閲覧専用モード用 UI 非表示処理
-  // =============================
-  window.addEventListener('DOMContentLoaded', () => {
-    const adminIds = [
-      'add-match-btn',
-      'decrease-courts-btn',
-      'increase-courts-btn',
-      'board-export-btn',
-      'board-export-type',
-      'delete-all-matches-btn',
-      'add-tournament-btn',
-      'delete-tournament-btn',
-      'logout-btn',
-      'publish-btn',
-      'tournament-modal',
-    ];
-
-    adminIds.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.style.display = 'none';
-      }
-    });
-
-    // さらに admin-only クラスが付いている要素も非表示
-    document.querySelectorAll('.admin-only').forEach(el => {
-      el.style.display = 'none';
-    });
-  });
 }
+
+
