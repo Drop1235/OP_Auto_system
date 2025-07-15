@@ -19,6 +19,7 @@ if (window.require) {
             const htmlPath = path.join(__dirname, '..', '..', 'board-view.html');
             fs.writeFileSync(htmlPath, board.innerHTML, 'utf8');
             console.log('Saved board-view snapshot to', htmlPath);
+            window.alert('対戦表を保存しました。デプロイを開始します。');
           }
         } catch (snapErr) {
           console.error('Failed to save board-view snapshot', snapErr);
