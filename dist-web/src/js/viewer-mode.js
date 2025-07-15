@@ -13,6 +13,8 @@ if (!window.require) {
       'delete-tournament-btn',
       'logout-btn',
       'publish-btn',
+      'board-view-btn',
+      'history-view-btn',
       'tournament-modal',
     ];
 
