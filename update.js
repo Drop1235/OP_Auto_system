@@ -11,11 +11,11 @@
  * Example (Electron after export):
  *   node update.js ../my-electron-app/dist-web
  */
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const fs = require('fs');
-const path = require('path');
-const git = require('simple-git');
+const { createRequire } = require('module');
+const requireFn = createRequire(__filename);
+const fs = requireFn('fs');
+const path = requireFn('path');
+const git = requireFn('simple-git');
 
 // Recursively copy files from src to dest (overwrite existing)
 function copyRecursiveSync(src, dest) {
