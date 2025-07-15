@@ -50,22 +50,66 @@ document.addEventListener('DOMContentLoaded', () => {
   const tournamentModalOk = document.getElementById('tournament-modal-ok');
   const tournamentModalCancel = document.getElementById('tournament-modal-cancel');
 
+  // ==== 共通ユーティリティ ====
+  /**
+   * 指定されたコンテナ内のすべてのフォーム要素（input, select, textarea, button）の
+   * disabled / readOnly / pointer-events 等をリセットして確実に操作可能にする。
+   * @param {HTMLElement} container
+   */
+  const enableModalInputs = (container) => {
+    if (!container) return;
+    const interactiveEls = container.querySelectorAll('input, select, textarea, button');
+    interactiveEls.forEach(el => {
+      el.disabled = false;
+      if ('readOnly' in el) el.readOnly = false;
+      el.style.pointerEvents = 'auto';
+      el.style.opacity = '1';
+      el.tabIndex = 0;
+      el.style.cursor = 'text';
+    });
+    // モーダル自体にも pointer-events を戻す
+    container.style.pointerEvents = 'auto';
+  };
+
   // ==== モーダル制御 ====
   const openTournamentModal = () => {
-    // 確実に入力欄を操作可能にする
-    tournamentNameInput.removeAttribute('disabled');
+    console.log('[APP] Opening tournament modal');
+    // モーダルを表示する前に確実に表示状態をリセット
+    tournamentModal.style.display = 'flex';
+    
+    // 入力フィールドのプロパティを確実にリセット
+    tournamentNameInput.disabled = false;
     tournamentNameInput.readOnly = false;
     tournamentNameInput.style.pointerEvents = 'auto';
+    tournamentNameInput.style.opacity = '1';
     tournamentNameInput.tabIndex = 0;
-    tournamentNameInput.addEventListener('focus', () => {
-      // 既存文字列があれば自動選択
+    
+    // イベントリスナーをクリアして再設定
+    const focusHandler = () => {
       requestAnimationFrame(() => {
         tournamentNameInput.select();
       });
-    }, { once: true });
+    };
+    
+    // 既存のイベントリスナーを削除
+    tournamentNameInput.removeEventListener('focus', focusHandler);
+    // 新しいイベントリスナーを追加
+    tournamentNameInput.addEventListener('focus', focusHandler, { once: true });
+    
+    // 入力欄を一括有効化
+    enableModalInputs(tournamentModal);
+    // モーダルを表示
     tournamentModal.classList.add('active');
     tournamentNameInput.value = '';
-    setTimeout(() => tournamentNameInput.focus(), 100);
+    
+    // フォーカスを設定（少し遅延させて確実にフォーカスが当たるように）
+    setTimeout(() => {
+      tournamentNameInput.focus();
+      // モバイルデバイス用に入力可能状態を強制
+      tournamentNameInput.click();
+    }, 150);
+    
+    console.log('[APP] Tournament modal opened');
   };
   const closeTournamentModal = () => {
     tournamentModal.classList.remove('active');
@@ -139,7 +183,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const nextId = newTournaments[0]?.id;
     setCurrentTournamentId(nextId);
     updateTournamentSelect();
-    window.location.reload();
+
+    // --- 以下、ページリロードを行わずにUIとデータベースを更新 ---
+    // 新しい大会IDでDBインスタンスを再生成
+    window.db = new TennisMatchDatabase(nextId);
+    // 既存の Board インスタンスがあれば再利用してマッチデータを再読み込み
+    if (window.board && typeof window.board.loadMatches === 'function') {
+      window.board.loadMatches();
+    }
+    // 履歴ビューも更新（History クラスが存在する場合）
+    if (typeof History === 'function' && window.historyInstance) {
+      window.historyInstance.loadHistory && window.historyInstance.loadHistory();
+    }
+    // --- ここまで追加処理 ---
   });
   // --- 大会管理機能 ここまで ---
   console.log('[APP] DOM content loaded, initializing application.');
@@ -162,6 +218,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   const history = new History();
+  // グローバル参照を保持して再利用できるように
+  window.historyInstance = history;
   
   // Set up navigation
   const boardViewBtn = document.getElementById('board-view-btn');
@@ -307,25 +365,102 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // Open modal - 試合追加ボタンのクリックイベント
-  if (addMatchBtn) {
-    console.log('[APP] Setting up click event listener for add match button');
+
+  
+  // 履歴ビューボタンのクリックイベント
+  historyViewBtn.onclick = function() {
+    console.log('[APP] History view button clicked');
+    historyView.classList.add('active-view');
+    boardView.classList.remove('active-view');
+    historyView.classList.remove('hidden-view');
+    boardView.classList.add('hidden-view');
     
-    // インラインイベントハンドラを使用
+    historyViewBtn.classList.add('active');
+    boardViewBtn.classList.remove('active');
+  };
+} else {
+  console.error('[APP] Navigation elements not found!');
+  alert('ナビゲーション要素が見つかりません。アプリを再起動してください。');
+}
+  
+// Set up add match modal
+const addMatchBtn = document.getElementById('add-match-btn');
+const addMatchModal = document.getElementById('add-match-modal');
+const closeModal = document.querySelector('.close-modal');
+const addMatchForm = document.getElementById('add-match-form');
+const courtSelect = document.getElementById('court-select');
+const positionSelect = document.getElementById('position-select');
+  
+// 要素が見つかったかどうかをログに出力（デバッグ用）
+console.log('[APP] Add match button found:', !!addMatchBtn);
+console.log('[APP] Add match modal found:', !!addMatchModal);
+console.log('[APP] Close modal found:', !!closeModal);
+console.log('[APP] Add match form found:', !!addMatchForm);
+  
+// 「Win」入力時の時刻表示機能
+const playerAInput = document.getElementById('player-a');
+const playerBInput = document.getElementById('player-b');
+
+
+      // Open modal - 試合追加ボタンのクリックイベント
+  if (addMatchBtn) {
     addMatchBtn.onclick = function() {
-      console.log('[APP] Add match button clicked via onclick');
-      
-      if (addMatchForm) {
-        addMatchForm.reset(); // Reset form first
-      }
-      
+      // フォームをリセット
+      if (addMatchForm) addMatchForm.reset();
+
+      // すべての入力を確実に有効化
+      enableModalInputs(addMatchModal);
+
+      // ポジション選択肢を更新
       if (typeof updatePositionSelectOptions === 'function') {
-        updatePositionSelectOptions(); // Then update position options based on (potentially reset) court selection
-      } else {
-        console.error('[APP] updatePositionSelectOptions is not a function');
+        updatePositionSelectOptions();
       }
 
-      // Load and set preferred game format
+      // 前回選択のゲーム形式を反映
+      const preferredGameFormat = localStorage.getItem('preferredGameFormat');
+      const gameFormatSelect = document.getElementById('game-format-select');
+      if (gameFormatSelect) {
+        const optionExists = Array.from(gameFormatSelect.options).some(o => o.value === preferredGameFormat);
+        gameFormatSelect.value = optionExists ? preferredGameFormat : '5game';
+      }
+
+      // モーダルを表示
+      if (addMatchModal) {
+        addMatchModal.style.display = 'flex';
+      }
+
+      // プレーヤー入力を有効化
+      const a = document.getElementById('player-a');
+      const b = document.getElementById('player-b');
+      [a, b].forEach(el => {
+        if (!el) return;
+        el.disabled = false;
+        if ('readOnly' in el) el.readOnly = false;
+        el.style.pointerEvents = 'auto';
+        el.style.opacity = '1';
+        el.tabIndex = 0;
+      });
+
+      window.focus();
+      setTimeout(() => {
+        if (a) {
+          a.focus();
+          a.click();
+        }
+      }, 150);
+
+      return false;
+    };
+
+    // ボタンを確実にクリック可能にする
+    addMatchBtn.style.pointerEvents = 'auto';
+    addMatchBtn.style.cursor = 'pointer';
+    addMatchBtn.style.opacity = '1';
+  } else {
+    console.error('[APP] Add match button not found');
+  }
+
+/* ---- duplicated obsolete block removed ----
       const preferredGameFormat = localStorage.getItem('preferredGameFormat');
       if (preferredGameFormat) {
         const gameFormatSelect = document.getElementById('game-format-select');
@@ -348,37 +483,60 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       if (addMatchModal) {
-        addMatchModal.style.display = 'block';
+        console.log('[APP] Showing add match modal');
+        // モーダルを表示する前にスタイルをリセット
+        addMatchModal.style.display = 'flex';
+        // 入力欄を一括有効化
+        enableModalInputs(addMatchModal);
         
-        // モーダルが表示された後に最初の入力フィールドにフォーカスを当てる
-        // --- 入力欄を即時有効化しフォーカスする処理 ---
+        // 入力フィールドを確実に有効化
         const a = document.getElementById('player-a');
         const b = document.getElementById('player-b');
+        
         if (a) {
-          a.removeAttribute('disabled');
+          a.disabled = false;
           a.readOnly = false;
+          a.style.pointerEvents = 'auto';
+          a.style.opacity = '1';
+          a.tabIndex = 0;
           a.style.pointerEvents = 'auto';
         }
         if (b) {
-          b.removeAttribute('disabled');
+          b.disabled = false;
           b.readOnly = false;
+          b.style.pointerEvents = 'auto';
+          b.style.opacity = '1';
+          b.tabIndex = 0;
           b.style.pointerEvents = 'auto';
         }
         // 1フレーム後にフォーカスを当てることで描画確定後に入力可能とする
-        requestAnimationFrame(() => {
-          if (a) a.focus();
-        });
+        // フォーカスを設定（少し遅延させて確実にフォーカスが当たるように）
+        // ウィンドウのフォーカスを明示的に設定
+        window.focus();
+        
+        setTimeout(() => {
+          if (a) {
+            a.focus();
+            // モバイルデバイス用に入力可能状態を強制
+            a.click();
+            // ウィンドウのフォーカスを再設定
+            if (window.electron) {
+              window.electron.focusWindow();
+            }
+          }
+        }, 150);
+        
+        console.log('[APP] Add match modal shown and inputs enabled');
       }
       return false; // イベントの伝播を停止
     };
     
     // スタイルを直接設定して確実にクリック可能にする
     addMatchBtn.style.pointerEvents = 'auto';
-    addMatchBtn.style.cursor = 'pointer';
-    addMatchBtn.style.opacity = '1';
   } else {
     console.error('[APP] Add match button not found');
     alert('試合追加ボタンが見つかりません。アプリを再起動してください。');
+duplicate obsolete block END */
   }
 
   // Update position select when court selection changes

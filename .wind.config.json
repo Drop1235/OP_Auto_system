@@ -1,0 +1,5 @@
+{
+  "name": "tennis-tournament-board",
+  "build": "npm run build",
+  "output": "dist-web"
+}
