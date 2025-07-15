@@ -14,18 +14,12 @@ if (window.require) {
         try {
           const board = document.getElementById('board-view');
           if (board) {
-            const fs = window.require('fs');
-            const path = window.require('path');
-            const htmlPath = path.join(__dirname, '..', '..', 'board-view.html');
-            fs.writeFileSync(htmlPath, board.innerHTML, 'utf8');
-            console.log('Saved board-view snapshot to', htmlPath);
-            window.alert('対戦表を保存しました。デプロイを開始します。');
+            const result = await ipcRenderer.invoke('publish-site', board.innerHTML);
+            alert(result);
           }
         } catch (snapErr) {
           console.error('Failed to save board-view snapshot', snapErr);
         }
-        const result = await ipcRenderer.invoke('publish-site');
-        alert(result);
       } catch (err) {
         alert('公開に失敗しました:\n' + err.message);
       } finally {
