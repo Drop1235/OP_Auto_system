@@ -28,7 +28,19 @@ if (!window.require) {
     if (ss) {
       ss.style.display = 'block';
       const img = ss.querySelector('img');
-      if (img) img.src = 'screenshot.png?_=' + Date.now(); // cache bust
+      // board-view HTML を Ajax で取得して表示
+      const bvEl = document.getElementById('board-view');
+      fetch('board-view.html?_=' + Date.now())
+        .then(res => {
+          if (!res.ok) throw new Error('snapshot not found');
+          return res.text();
+        })
+        .then(html => {
+          if (bvEl) bvEl.innerHTML = html;
+        })
+        .catch(() => {
+          if (bvEl) bvEl.innerHTML = '<p style="text-align:center;">まだ公開された対戦表がありません。</p>';
+        }); // cache bust
     }
     const adminIds = [
       'add-match-btn',
