@@ -52,6 +52,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ==== モーダル制御 ====
   const openTournamentModal = () => {
+    // 確実に入力欄を操作可能にする
+    tournamentNameInput.removeAttribute('disabled');
+    tournamentNameInput.readOnly = false;
+    tournamentNameInput.style.pointerEvents = 'auto';
+    tournamentNameInput.tabIndex = 0;
+    tournamentNameInput.addEventListener('focus', () => {
+      // 既存文字列があれば自動選択
+      requestAnimationFrame(() => {
+        tournamentNameInput.select();
+      });
+    }, { once: true });
     tournamentModal.classList.add('active');
     tournamentNameInput.value = '';
     setTimeout(() => tournamentNameInput.focus(), 100);
@@ -67,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
   tournamentModalCancel.addEventListener('click', () => {
     closeTournamentModal();
   });
-  tournamentModalOk.addEventListener('click', () => {
+  tournamentModalOk.addEventListener('click', async () => {
     const name = tournamentNameInput.value.trim();
     if (name) {
       const id = 'tournament-' + Date.now();
@@ -75,8 +86,16 @@ document.addEventListener('DOMContentLoaded', () => {
       saveTournaments(tournaments);
       setCurrentTournamentId(id);
       updateTournamentSelect();
+      // 既存データが残っている可能性があるので完全に削除して空状態にする
+      localStorage.removeItem('tennisTournamentMatches_' + id);
+      // 新しい大会用にDBインスタンスを再生成
+      window.db = new TennisMatchDatabase(id);
+      if (window.board && typeof window.board.loadMatches === 'function') {
+        await window.board.loadMatches();
+      }
       closeTournamentModal();
-      window.location.reload();
+      // ページ再読込は不要となったためコメントアウト
+      // window.location.reload();
     } else {
       tournamentNameInput.focus();
     }
@@ -86,10 +105,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Escape') closeTournamentModal();
   });
 
-  // 大会切り替え
-  tournamentSelect.addEventListener('change', (e) => {
-    setCurrentTournamentId(e.target.value);
-    window.location.reload(); // 大会切り替え時に全リロード（後で最適化可）
+  // 大会切り替え (リロードせずにDBとUIを更新)
+  tournamentSelect.addEventListener('change', async (e) => {
+    const newId = e.target.value;
+    console.log('[APP] Tournament changed to', newId);
+    setCurrentTournamentId(newId);
+    // 新しい大会IDでDBインスタンスを再生成
+    window.db = new TennisMatchDatabase(newId);
+    if (window.board && typeof window.board.loadMatches === 'function') {
+      await window.board.loadMatches();
+    }
   });
 
   // 大会削除機能

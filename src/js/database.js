@@ -10,10 +10,10 @@ class TennisMatchDatabase {
   }
 
   // Initialize the database
-  async initDatabase() {
+  async initDatabase(forceReload = false) {
     try {
       // データベースがすでに初期化されているか確認
-      if (this.db === true) {
+      if (this.db === true && !forceReload) {
         console.log('Database already initialized');
         return true;
       }
@@ -28,7 +28,13 @@ class TennisMatchDatabase {
       if (storedData) {
         try {
           const parsedData = JSON.parse(storedData);
-          this.matches = parsedData.matches || [];
+          this.matches = (parsedData.matches || []).map(m => {
+            if (!m.tournamentId) {
+              // 既存データに大会IDがなければ補完
+              return { ...m, tournamentId: this.tournamentId };
+            }
+            return m;
+          });
           this.nextId = parsedData.nextId || 1;
           console.log(`Loaded ${this.matches.length} matches from localStorage`);
         } catch (parseError) {
@@ -64,6 +70,24 @@ class TennisMatchDatabase {
     }
   }
 
+  /**
+   * 大会切り替え処理
+   * @param {string} newTournamentId
+   */
+  async switchTournament(newTournamentId) {
+    if (!newTournamentId) return;
+    if (this.tournamentId === newTournamentId) return;
+    console.log('[DATABASE] Switching tournament from', this.tournamentId, 'to', newTournamentId);
+    this.tournamentId = newTournamentId;
+    this.storageKey = 'tennisTournamentMatches_' + newTournamentId;
+    // --- ここで必ず空データで初期化・保存 ---
+    this.matches = [];
+    this.nextId = 1;
+    this._saveToStorage();
+    // --- その後、DB再初期化（空のまま） ---
+    await this.initDatabase(true);
+  }
+
   // Save current state to localStorage
   _saveToStorage() {
     try {
@@ -71,9 +95,8 @@ class TennisMatchDatabase {
         matches: this.matches,
         nextId: this.nextId
       };
-      // 保存先キーを大会ごとに分離
-      this.tournamentId = localStorage.getItem('currentTournamentId') || 'default';
-      this.storageKey = 'tennisTournamentMatches_' + this.tournamentId;
+      // tournamentId はインスタンス生成時の値を保持し、動的に変更しない
+      // storageKey も固定
       localStorage.setItem(this.storageKey, JSON.stringify(dataToStore));
       return true;
     } catch (error) {
@@ -96,6 +119,8 @@ class TennisMatchDatabase {
       // Create a new match with default values
       const newMatch = {
         id: matchId,
+        // UIから渡されたtournamentIdは完全無視し、必ず現在のDBインスタンスのtournamentIdをセット
+        tournamentId: this.tournamentId,
         playerA: match.playerA,
         playerB: match.playerB,
         gameFormat: match.gameFormat || '5game', // 試合形式を追加
@@ -153,7 +178,7 @@ class TennisMatchDatabase {
       
       // Update match properties
       const existingMatch = this.matches[index];
-      const updatedMatch = { ...existingMatch, ...match };
+      const updatedMatch = { ...existingMatch, ...match, tournamentId: this.tournamentId };
       
       // Replace in array
       this.matches[index] = updatedMatch;
@@ -260,16 +285,15 @@ class TennisMatchDatabase {
 
 // Choose backend: Firestore if firebase loaded, else localStorage
 let db;
+const currentTournamentId = localStorage.getItem('currentTournamentId') || 'default';
 if (window.firebase && window.firestore && window.FirestoreMatchDatabase) {
-  db = new window.FirestoreMatchDatabase();
+  db = new window.FirestoreMatchDatabase(currentTournamentId);
   db.initDatabase();
   console.log('Using Firestore backend');
 } else {
-  db = new TennisMatchDatabase();
+  db = new TennisMatchDatabase(currentTournamentId);
   console.log('Using localStorage backend');
 }
 
 // Export database instance
-
-// グローバル変数としてdbを設定
 window.db = db;

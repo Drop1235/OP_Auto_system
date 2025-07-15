@@ -55,11 +55,24 @@ document.addEventListener('DOMContentLoaded', () => {
   const tournamentModalCancel = document.getElementById('tournament-modal-cancel');
 
   function openTournamentModal() {
+    // 確実に入力フィールドを有効化し、クリック・入力可能にする
+    if (tournamentNameInput) {
+      tournamentNameInput.disabled = false;
+    tournamentNameInput.removeAttribute('disabled');
+      tournamentNameInput.readOnly = false;
+      tournamentNameInput.style.pointerEvents = 'auto';
+      tournamentNameInput.style.cursor = 'text';
+      tournamentNameInput.tabIndex = 0;
+    }
+
     tournamentModal.classList.add('active');
+    tournamentModal.style.display = 'block'; // display:block を明示
+
     tournamentNameInput.value = '';
     setTimeout(() => tournamentNameInput.focus(), 100);
   }
   function closeTournamentModal() {
+  tournamentModal.style.display = 'none';
     tournamentModal.classList.remove('active');
     tournamentNameInput.value = '';
   }

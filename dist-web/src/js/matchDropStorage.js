@@ -4,7 +4,15 @@
 // MatchDrop用：試合データ（matchData）のlocalStorage保存・読み込みユーティリティ
 // 標準的な配列形式のmatchDataを想定
 
-  const MATCH_DATA_KEY = 'matchData';
+  // --- 変更: 大会ごとにローカルストレージキーを分離 --------------------------
+  /**
+   * 現在の大会IDに応じたローカルストレージキーを取得する。
+   * @returns {string}
+   */
+  function getMatchDataKey() {
+    const currentId = localStorage.getItem('currentTournamentId') || 'default';
+    return 'tennisTournamentMatches_' + currentId;
+  }
 
 /**
  * localStorageからmatchData（配列）を読み込む
@@ -12,6 +20,7 @@
  * @returns {Array}
  */
   function loadMatchData() {
+    const MATCH_DATA_KEY = getMatchDataKey();
   try {
     const stored = localStorage.getItem(MATCH_DATA_KEY);
     if (stored) {
@@ -32,8 +41,11 @@
  * @param {Array} data
  */
   function saveMatchData(data) {
+    const MATCH_DATA_KEY = getMatchDataKey();
   try {
-    localStorage.setItem(MATCH_DATA_KEY, JSON.stringify(data));
+    const currentTournamentId = localStorage.getItem('currentTournamentId');
+    const storageKey = `tennisTournamentMatches_${currentTournamentId}`;
+    localStorage.setItem(storageKey, JSON.stringify(data));
   } catch (e) {
     // 保存失敗時もエラーは出さない
     console.warn('matchDataの保存に失敗:', e);
@@ -65,6 +77,8 @@
   }
 
   // window へ公開
+  // getMatchDataKey も必要に応じて公開
+  global.getMatchDataKey = getMatchDataKey;
   global.loadMatchData = loadMatchData;
   global.saveMatchData = saveMatchData;
   global.setupMatchDropStorageSync = setupMatchDropStorageSync;

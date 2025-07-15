@@ -1,9 +1,0 @@
-リポジトリ： https://github.com/Drop1235/OP_Auto_system
-ブランチ： web_supabase（自動で作成）
-
-これで • Supabase 設定ファイルの追加
-• public-viewer の新規追加
-• 勝者マーク位置の修正
-
-がすべて GitHub に保存されています。
-他に調整したい点があれば知らせてください。
