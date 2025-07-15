@@ -18,6 +18,18 @@ let mainWindow;
 // IPC: "publish-site" -> Run update.js to push static site and deploy via Netlify
 // -----------------------------------------------------------------------------
 ipcMain.handle('publish-site', async () => {
+  // Capture screenshot of current window and save to dist-web/screenshot.png
+  try {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      const image = await mainWindow.capturePage();
+      const fs = await import('node:fs/promises');
+      const screenshotPath = path.join(__dirname, 'dist-web', 'screenshot.png');
+      await fs.writeFile(screenshotPath, image.toPNG());
+      console.log('Screenshot saved to', screenshotPath);
+    }
+  } catch (capErr) {
+    console.error('Failed to capture screenshot', capErr);
+  }
   return await new Promise((resolve, reject) => {
     try {
       const scriptPath = path.join(__dirname, 'update.js');
