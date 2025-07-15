@@ -1,5 +1,5 @@
 [build]
-  publish = "." # プロジェクトルートを公開（public-viewer も含む）
+  publish = "." # ルートディレクトリを公開
 
 [dev]
   command = "node server.js" # ローカル開発時のコマンド

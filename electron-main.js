@@ -1,4 +1,5 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
+import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'url';
 
@@ -12,6 +13,31 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 let mainWindow;
+
+// -----------------------------------------------------------------------------
+// IPC: "publish-site" -> Run update.js to push static site and deploy via Netlify
+// -----------------------------------------------------------------------------
+ipcMain.handle('publish-site', async () => {
+  return await new Promise((resolve, reject) => {
+    try {
+      const scriptPath = path.join(__dirname, 'update.js');
+      const distWebPath = path.join(__dirname, 'dist-web');
+      const proc = spawn(process.execPath, [scriptPath, distWebPath], {
+        cwd: __dirname,
+        stdio: 'inherit',
+      });
+      proc.on('close', code => {
+        if (code === 0) {
+          resolve('公開が完了しました。Netlify がデプロイを開始しました。');
+        } else {
+          reject(new Error(`update.js exited with code ${code}`));
+        }
+      });
+    } catch (err) {
+      reject(err);
+    }
+  });
+});
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({

@@ -23,13 +23,6 @@
   display: block;
 }
 #tournament-modal input[type="text"] {
-  pointer-events: auto !important; /* クリックを確実に有効に */
-  cursor: text !important;
-  user-select: text;
-  -webkit-user-select: text;
-  -moz-user-select: text;
-  -ms-user-select: text;
-
   width: 90%;
   padding: 0.5em;
   margin-bottom: 1em;

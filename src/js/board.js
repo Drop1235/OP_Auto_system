@@ -210,37 +210,12 @@ class Board {
   // Load matches from the database and place them on the board
   async loadMatches() {
     try {
-      // Get all matches from the database (全試合取得)
-      let matches = await db.getAllMatches();
-
-      // -----------------------------
-      // 大会フィルタリングを追加
-      // -----------------------------
-      const currentTournamentId = localStorage.getItem('currentTournamentId');
-      if (currentTournamentId) {
-        matches = matches.filter(m => m.tournamentId === currentTournamentId);
-      }
-
-      // -----------------------------
-      // 既存の対戦表を完全にリセット
-      // -----------------------------
-      // 1) マッチカード(Map) と DOM 要素を削除
-      this.matchCards.forEach(card => {
-        if (card && card.element) card.element.remove();
-      });
+      // Get all matches from the database
+      const matches = await db.getAllMatches();
+      
+      // Clear existing match cards
       this.matchCards.clear();
-      // マップ外に残っている安全でないカードも削除
-      document.querySelectorAll('.match-card').forEach(el => el.remove());
-
-      // 2) コートグリッド自体を再生成してプレースホルダーを初期化
-      if (this.courtGrid) {
-        this.courtGrid.innerHTML = '';
-      }
-      this.createCourtGrid();
-
-      // 3) court select 等の UI を再同期
-      this.updateCourtSelectOptions();
-
+      
       // Place matches on the board based on their court and row position
       matches.forEach(match => {
         if (match.status === 'Completed') {
@@ -805,9 +780,7 @@ class Board {
 
   // Add a new match to the board
   addMatch(match) {
-    if (match.courtNumber && match.rowPosition) {
-      this.createAndPlaceMatchCard(match);
-    }
+    // 何もしない
   }
 
   getOccupiedRowPositions(courtNumber) {
