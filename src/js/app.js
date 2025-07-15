@@ -55,11 +55,24 @@ document.addEventListener('DOMContentLoaded', () => {
   const tournamentModalCancel = document.getElementById('tournament-modal-cancel');
 
   function openTournamentModal() {
+    // 確実に入力フィールドを有効化し、クリック・入力可能にする
+    if (tournamentNameInput) {
+      tournamentNameInput.disabled = false;
+    tournamentNameInput.removeAttribute('disabled');
+      tournamentNameInput.readOnly = false;
+      tournamentNameInput.style.pointerEvents = 'auto';
+      tournamentNameInput.style.cursor = 'text';
+      tournamentNameInput.tabIndex = 0;
+    }
+
     tournamentModal.classList.add('active');
+    tournamentModal.style.display = 'block'; // display:block を明示
+
     tournamentNameInput.value = '';
     setTimeout(() => tournamentNameInput.focus(), 100);
   }
   function closeTournamentModal() {
+  tournamentModal.style.display = 'none';
     tournamentModal.classList.remove('active');
     tournamentNameInput.value = '';
   }
@@ -94,6 +107,26 @@ document.addEventListener('DOMContentLoaded', () => {
     setCurrentTournamentId(e.target.value);
     window.location.reload(); // 大会切り替え時に全リロード（後で最適化可）
   });
+  // 「更新」ボタンのクリックイベント
+  const refreshBtn = document.getElementById('refresh-btn');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      // ページ全体をリロード（キャッシュを無視して強制リロード）
+      if (typeof window.location.reload === 'function') {
+        // `true` はレガシー仕様のため try-catch でフォールバック
+        try {
+          window.location.reload(true);
+        } catch (_) {
+          window.location.reload();
+        }
+      } else {
+        // Fallback for environments like certain Electron versions
+        window.location.href = window.location.href;
+      }
+    });
+  }
+
   // 大会削除機能
   const deleteTournamentBtn = document.getElementById('delete-tournament-btn');
   deleteTournamentBtn.addEventListener('click', () => {
@@ -328,41 +361,24 @@ document.addEventListener('DOMContentLoaded', () => {
         addMatchModal.style.display = 'block';
         
         // モーダルが表示された後に最初の入力フィールドにフォーカスを当てる
-        const enablePlayerInputs = () => {
-          const a = document.getElementById('player-a');
-          const b = document.getElementById('player-b');
-          if (a) { a.disabled = false; a.readOnly = false; }
-          if (b) { b.disabled = false; b.readOnly = false; }
-        };
-        enablePlayerInputs();
-
-        // 最大2秒間、100ms間隔で有効化を試みる（全削除直後の重い処理でも確実に入力可にする）
-        const enableInterval = setInterval(() => {
-          enablePlayerInputs();
-        }, 100);
-        setTimeout(() => clearInterval(enableInterval), 2000);
-
-        setTimeout(() => {
-          const playerAInput = document.getElementById('player-a');
-          if (playerAInput) {
-            // 念のため入力を有効化
-            playerAInput.disabled = false;
-            playerAInput.readOnly = false;
-            playerAInput.focus();
-            console.log('[APP] Focus set to player A input');
-          }
-          const playerBInput = document.getElementById('player-b');
-          if (playerBInput) {
-            playerBInput.disabled = false;
-            playerBInput.readOnly = false;
-            playerBInput.focus();
-          }
-        }, 100);
-      } else {
-        console.error('[APP] Add match modal not found');
-        alert('モーダルが見つかりません');
+        // --- 入力欄を即時有効化しフォーカスする処理 ---
+        const a = document.getElementById('player-a');
+        const b = document.getElementById('player-b');
+        if (a) {
+          a.removeAttribute('disabled');
+          a.readOnly = false;
+          a.style.pointerEvents = 'auto';
+        }
+        if (b) {
+          b.removeAttribute('disabled');
+          b.readOnly = false;
+          b.style.pointerEvents = 'auto';
+        }
+        // 1フレーム後にフォーカスを当てることで描画確定後に入力可能とする
+        requestAnimationFrame(() => {
+          if (a) a.focus();
+        });
       }
-      
       return false; // イベントの伝播を停止
     };
     
@@ -445,28 +461,14 @@ document.addEventListener('DOMContentLoaded', () => {
           rowPosition: position || null
         };
         
-        // Add match to database
-        console.log('[APP] Adding match to database:', newMatch);
+                // メモリDBに保存し、戻り値（ID付き）を取得
         const addedMatch = await db.addMatch(newMatch);
-        console.log('[APP] Match added to database, returned match:', addedMatch);
-        
-        // 確認のため、board オブジェクトが存在するか確認
-        console.log('[APP] Before event dispatch - Board object exists:', !!window.board);
-        console.log('[APP] Board object details:', window.board);
-        console.log('[APP] Board methods:', Object.getOwnPropertyNames(window.board.__proto__));
+        console.log('[APP] Match added to Memory DB:', addedMatch);
         
         // Dispatch event to notify board of new match
         const addEvent = new CustomEvent('match-added', {
           detail: { match: addedMatch }
         });
-        console.log('[APP] Dispatching match-added event for match ID:', addedMatch.id, addedMatch);
-        
-        // イベント発行前にイベントリスナーが登録されているか確認
-        const listeners = window.board && typeof window.board._checkEventListeners === 'function' 
-          ? window.board._checkEventListeners('match-added') 
-          : 'Cannot check event listeners';
-        console.log('[APP] Event listeners for match-added:', listeners);
-        
         document.dispatchEvent(addEvent);
         console.log('[APP] Event dispatched');
         

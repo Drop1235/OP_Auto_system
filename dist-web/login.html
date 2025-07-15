@@ -3,26 +3,91 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>テニストーナメント対戦表 - ログイン</title>
-  <link rel="stylesheet" href="src/css/styles.css">
+  <title>MatchDrop - ログイン</title>
+  <link rel="icon" href="assets/icon.png">
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="src/js/firebase-config.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; background-color: #f5f5f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-    .login-container { background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); width: 350px; text-align: center; }
-    h1 { color: #e91e63; margin-bottom: 20px; }
-    .input-group { margin-bottom: 20px; }
-    input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; box-sizing: border-box; }
-    button { background-color: #e91e63; color: white; border: none; padding: 12px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; }
-    button:hover { background-color: #d81b60; }
-    .error-message { color: red; margin-top: 10px; display: none; }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .login-container {
+      background-color: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      width: 350px;
+      text-align: center;
+    }
+    h1 {
+      color: #e91e63;
+      margin-bottom: 20px;
+    }
+    .input-group {
+      margin-bottom: 20px;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+      box-sizing: border-box;
+      /* 強制的にクリック可能にする */
+      pointer-events: auto !important;
+      user-select: text !important;
+      -webkit-user-select: text !important;
+      -moz-user-select: text !important;
+      -ms-user-select: text !important;
+      opacity: 1 !important;
+      z-index: 9999 !important;
+      position: relative !important;
+    }
+    button {
+      background-color: #28a745;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      width: 100%;
+    }
+    button:hover {
+      background-color: #218838;
+    }
+    .mascot {
+      width: 120px;
+      height: auto;
+      margin: 10px auto;
+    }
+    .error-message {
+      color: red;
+      margin-top: 10px;
+      display: none;
+    }
   </style>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://*.firebaseio.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
 </head>
 <body>
   <div class="login-container">
-    <h1>テニストーナメント対戦表</h1>
+    <div class="app-brand" style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+      <img src="assets/icon.png" alt="MatchDrop icon" style="width:64px;height:64px;">
+      <span style="font-size:24px;font-weight:600;color:#28a745;">MatchDrop</span>
+      <img src="画像/mitama.jpg" class="mascot" alt="App mascot">
+    </div>
     <form id="login-form">
       <div class="input-group">
-        <input type="password" id="password" placeholder="パスワードを入力してください" required>
+        <input type="password" id="password" placeholder="パスワードを入力してください" required autofocus>
       </div>
       <button type="submit">ログイン</button>
       <p id="error-message" class="error-message">パスワードが正しくありません</p>

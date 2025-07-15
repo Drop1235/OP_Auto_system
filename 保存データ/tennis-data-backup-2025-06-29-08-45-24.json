@@ -1,0 +1,152 @@
+{
+  "tournaments": [
+    {
+      "id": "tournament-1751240533822",
+      "name": "テスト①"
+    }
+  ],
+  "matches": [
+    {
+      "id": 1,
+      "playerA": "松永一紀",
+      "playerB": "内田傑之",
+      "gameFormat": "6game1set",
+      "actualStartTime": null,
+      "actualEndTime": "2025-06-29T23:42:55.317Z",
+      "status": "Win",
+      "courtNumber": 1,
+      "rowPosition": "current",
+      "scoreA": 6,
+      "scoreB": 7,
+      "setScores": {
+        "A": [
+          null
+        ],
+        "B": [
+          null
+        ]
+      },
+      "tieBreakA": 4,
+      "tieBreakB": "",
+      "winner": "B",
+      "memo": "",
+      "tiebreakScore": null,
+      "createdAt": "2025-06-29T23:42:27.422Z"
+    },
+    {
+      "id": 2,
+      "playerA": "神田芳次",
+      "playerB": "木村博",
+      "gameFormat": "6game1set",
+      "actualStartTime": null,
+      "actualEndTime": "2025-06-29T23:43:09.576Z",
+      "status": "Win",
+      "courtNumber": 2,
+      "rowPosition": "current",
+      "scoreA": 5,
+      "scoreB": 7,
+      "setScores": {
+        "A": [
+          null
+        ],
+        "B": [
+          null
+        ]
+      },
+      "tieBreakA": "",
+      "tieBreakB": "",
+      "winner": "B",
+      "memo": "",
+      "tiebreakScore": null,
+      "createdAt": "2025-06-29T23:42:36.906Z"
+    },
+    {
+      "id": 3,
+      "playerA": "佐藤隆太",
+      "playerB": "児玉良治",
+      "gameFormat": "6game1set",
+      "actualStartTime": null,
+      "actualEndTime": "2025-06-29T23:43:13.455Z",
+      "status": "Win",
+      "courtNumber": 3,
+      "rowPosition": "current",
+      "scoreA": 6,
+      "scoreB": 1,
+      "setScores": {
+        "A": [
+          null
+        ],
+        "B": [
+          null
+        ]
+      },
+      "tieBreakA": "",
+      "tieBreakB": "",
+      "winner": "A",
+      "memo": "",
+      "tiebreakScore": null,
+      "createdAt": "2025-06-29T23:42:46.381Z"
+    },
+    {
+      "id": 4,
+      "playerA": "鈴木孝雄",
+      "playerB": "本村剛一",
+      "gameFormat": "6game1set",
+      "actualStartTime": null,
+      "actualEndTime": null,
+      "status": "Next",
+      "courtNumber": 1,
+      "rowPosition": "next",
+      "scoreA": "",
+      "scoreB": "",
+      "setScores": {
+        "A": [
+          null
+        ],
+        "B": [
+          null
+        ]
+      },
+      "tieBreakA": "",
+      "tieBreakB": "",
+      "winner": null,
+      "memo": "",
+      "tiebreakScore": null,
+      "createdAt": "2025-06-29T23:43:38.973Z"
+    },
+    {
+      "id": 5,
+      "playerA": "片山翔",
+      "playerB": "錦織圭",
+      "gameFormat": "6game1set",
+      "actualStartTime": null,
+      "actualEndTime": null,
+      "status": "Next",
+      "courtNumber": 2,
+      "rowPosition": "next",
+      "scoreA": "",
+      "scoreB": "",
+      "setScores": {
+        "A": [
+          null
+        ],
+        "B": [
+          null
+        ]
+      },
+      "tieBreakA": "",
+      "tieBreakB": "",
+      "winner": null,
+      "memo": "",
+      "tiebreakScore": null,
+      "createdAt": "2025-06-29T23:44:02.845Z"
+    }
+  ],
+  "players": {},
+  "currentTournament": {
+    "id": "tournament-1751240533822",
+    "name": "テスト①"
+  },
+  "currentTournamentId": "tournament-1751240533822",
+  "exportDate": "2025-06-29T23:45:24.780Z"
+}

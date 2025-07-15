@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MatchDrop - ログイン</title>
   <link rel="icon" href="assets/icon.png">
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="src/js/firebase-config.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -37,6 +42,15 @@
       border-radius: 4px;
       font-size: 16px;
       box-sizing: border-box;
+      /* 強制的にクリック可能にする */
+      pointer-events: auto !important;
+      user-select: text !important;
+      -webkit-user-select: text !important;
+      -moz-user-select: text !important;
+      -ms-user-select: text !important;
+      opacity: 1 !important;
+      z-index: 9999 !important;
+      position: relative !important;
     }
     button {
       background-color: #28a745;
@@ -51,23 +65,29 @@
     button:hover {
       background-color: #218838;
     }
+    .mascot {
+      width: 120px;
+      height: auto;
+      margin: 10px auto;
+    }
     .error-message {
       color: red;
       margin-top: 10px;
       display: none;
     }
   </style>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://*.firebaseio.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
 </head>
 <body>
   <div class="login-container">
     <div class="app-brand" style="display:flex;flex-direction:column;align-items:center;gap:8px;">
       <img src="assets/icon.png" alt="MatchDrop icon" style="width:64px;height:64px;">
       <span style="font-size:24px;font-weight:600;color:#28a745;">MatchDrop</span>
+      <img src="画像/mitama.jpg" class="mascot" alt="App mascot">
     </div>
     <form id="login-form">
       <div class="input-group">
-        <input type="password" id="password" placeholder="パスワードを入力してください" required>
+        <input type="password" id="password" placeholder="パスワードを入力してください" required autofocus>
       </div>
       <button type="submit">ログイン</button>
       <p id="error-message" class="error-message">パスワードが正しくありません</p>

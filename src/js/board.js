@@ -30,7 +30,8 @@ class Board {
     // this.loadGameFormat() は定義されていないため削除
     this.setupCourtSettings(); // This will also set up game format control
     this.updateCourtSelectOptions(); // Populate court select options on init
-    this.setupUnassignedArea(); // 未割当エリアのドラッグ＆ドロップ機能を設定
+    this.setupUnassignedArea(); // 未割当エリアのドラッグ＆��ロップ機能を設定
+    this.setupExportFunctions(); // エクスポート機能のセットアップ
   }
 
   // Create the court grid with the specified number of courts
@@ -249,9 +250,11 @@ class Board {
     console.log('[BOARD] Creating new MatchCard instance');
     const matchCard = new MatchCard(match);
     console.log('[BOARD] MatchCard created:', matchCard);
+
+    // マッチカードをマップに登録（更新処理や次回のコートグリッド更新で参照するため）
+    this.matchCards.set(match.id, matchCard);
     console.log('[BOARD] MatchCard match game format:', matchCard.match.gameFormat);
     console.log('[BOARD] MatchCard element:', matchCard.element);
-    this.matchCards.set(match.id, matchCard);
     
     // 未割当の場合は未割当カードエリアに配置
     if (!match.courtNumber || !match.rowPosition) {
@@ -298,7 +301,28 @@ class Board {
       this.handleMatchUpdate(match);
     });
     
-    // Listen for new matches
+    // Listen for deleted matches
+  document.addEventListener('match-deleted', (e) => {
+    const { matchId } = e.detail;
+    console.log('[BOARD] Received match-deleted event for match ID:', matchId);
+
+    // Remove from map
+    if (this.matchCards.has(matchId)) {
+      const matchCard = this.matchCards.get(matchId);
+      // Ensure UI element is removed (safety)
+      if (matchCard && matchCard.element) {
+        matchCard.element.remove();
+      }
+      this.matchCards.delete(matchId);
+    }
+
+    // そのコートのプレースホルダー表示を更新
+    if (e.detail.courtNumber) {
+      this.showPlaceholderIfEmpty(e.detail.courtNumber, e.detail.rowPosition);
+    }
+  });
+
+  // Listen for new matches
     document.addEventListener('match-added', (e) => {
       const { match } = e.detail;
       console.log('[BOARD] Received match-added event for match ID:', match.id, match);
@@ -320,7 +344,7 @@ class Board {
   setupCourtSettings() {
     // コート数の増減ボタンのイベントリスナーを設定
     if (this.decreaseCourtsBtn) {
-      this.decreaseCourtsBtn.addEventListener('click', () => {
+      this.decreaseCourtsBtn.addEventListener('click', async () => {
         if (this.numberOfCourts > 1) {
           // 削除されるコートにマッチカードがあるかチェック
           const matchesInLastCourt = this.getMatchesInCourt(this.numberOfCourts);
@@ -333,29 +357,29 @@ class Board {
               // ユーザーがOKした場合、該当するマッチを削除
               this.deleteMatchesInCourt(this.numberOfCourts);
               this.numberOfCourts--;
-              this.updateCourtGrid();
+              await this.updateCourtGrid();
             }
             // ユーザーがキャンセルした場合は何もしない
           } else {
             // 削除されるコートにマッチカードがない場合はそのまま減らす
             this.numberOfCourts--;
-            this.updateCourtGrid();
+            await this.updateCourtGrid();
           }
         }
       });
     }
     
     if (this.increaseCourtsBtn) {
-      this.increaseCourtsBtn.addEventListener('click', () => {
+      this.increaseCourtsBtn.addEventListener('click', async () => {
         if (this.numberOfCourts < 24) { // 最大24コートまで
           this.numberOfCourts++;
-          this.updateCourtGrid();
+          await this.updateCourtGrid();
         }
       });
     }
     
     if (this.deleteAllMatchesBtn) {
-      this.deleteAllMatchesBtn.addEventListener('click', () => {
+      this.deleteAllMatchesBtn.addEventListener('click', async () => {
         // 現在のマッチカード数を取得
         const matchCount = this.matchCards.size;
         
@@ -377,41 +401,69 @@ class Board {
   }
 
   // コートグリッドを更新（既存のマッチカードデータを保持）
-  updateCourtGrid() {
+  async updateCourtGrid() {
     console.log('[BOARD] updateCourtGrid called');
     
     // 現在のマッチカードの状態を保存
     const currentMatchStates = new Map();
     console.log('[BOARD] Current matchCards size:', this.matchCards.size);
     
-    this.matchCards.forEach((matchCard, matchId) => {
+    for (const [matchId, matchCard] of this.matchCards) {
       console.log('[BOARD] Processing matchCard ID:', matchId, 'matchCard:', matchCard);
       
       if (matchCard && matchCard.match) {
-        // スコアやその他の状態を保存
-        const scoreA = matchCard.getScoreA ? matchCard.getScoreA() : matchCard.match.scoreA;
-        const scoreB = matchCard.getScoreB ? matchCard.getScoreB() : matchCard.match.scoreB;
-        const setScores = matchCard.getSetScores ? matchCard.getSetScores() : matchCard.match.setScores;
-        const tiebreakScore = matchCard.getTiebreakScore ? matchCard.getTiebreakScore() : {
-          A: matchCard.match.tieBreakA || '',
-          B: matchCard.match.tieBreakB || ''
-        };
-        
-        console.log('[BOARD] Saving state for match', matchId, '- ScoreA:', scoreA, 'ScoreB:', scoreB);
-        
-        const currentState = {
-          ...matchCard.match,
-          scoreA: scoreA,
-          scoreB: scoreB,
-          setScores: setScores,
-          tieBreakA: tiebreakScore.A,
-          tieBreakB: tiebreakScore.B,
-          winner: matchCard.match.winner
-        };
-        currentMatchStates.set(matchId, currentState);
+      const format = (matchCard.match.gameFormat || '').toLowerCase();
+      const multiSet = /2set|3set/.test(format);
+      // マッチカードをマップに登録（更新処理や次回のコートグリッド更新で参照するため）
+      // 現在のスコアを取得して保存（DOM削除前に確実に内部データを保持）
+      let scoreA = matchCard.match.scoreA;
+      let scoreB = matchCard.match.scoreB;
+      
+      console.log('[BOARD] Initial scores from match data - ScoreA:', scoreA, 'ScoreB:', scoreB);
+      
+      // マルチセット形式の場合は合計スコアを再計算
+      if (multiSet) {
+        try { matchCard.calculateTotalScore(); } catch(e){ console.warn('calculateTotalScore failed',e);} 
+        scoreA = matchCard.match.scoreA;
+        scoreB = matchCard.match.scoreB;
       }
-    });
-
+      
+      // DOM入力値も参考として取得（ただし内部データを優先）
+      const domScoreA = matchCard.getScoreA ? matchCard.getScoreA() : null;
+      const domScoreB = matchCard.getScoreB ? matchCard.getScoreB() : null;
+      
+      // DOM入力値が有効で内部データと異なる場合のみ更新
+      if (domScoreA !== null && domScoreA !== '' && domScoreA !== scoreA) {
+        console.log('[BOARD] Using DOM scoreA:', domScoreA, 'instead of match data:', scoreA);
+        scoreA = domScoreA;
+      }
+      if (domScoreB !== null && domScoreB !== '' && domScoreB !== scoreB) {
+        console.log('[BOARD] Using DOM scoreB:', domScoreB, 'instead of match data:', scoreB);
+        scoreB = domScoreB;
+      }
+      
+      // 数値として保持されている場合は文字列へ変換
+      if (typeof scoreA === 'number') scoreA = String(scoreA);
+      if (typeof scoreB === 'number') scoreB = String(scoreB);
+      
+      // null/undefined の場合は空文字に統一
+      if (scoreA == null) scoreA = '';
+      if (scoreB == null) scoreB = '';
+      
+      const currentState = {
+        ...matchCard.match,
+        scoreA: scoreA,
+        scoreB: scoreB,
+        setScores: matchCard.getSetScores ? matchCard.getSetScores() : matchCard.match.setScores,
+        tieBreakA: matchCard.getTiebreakScore ? matchCard.getTiebreakScore().A : matchCard.match.tieBreakA,
+        tieBreakB: matchCard.getTiebreakScore ? matchCard.getTiebreakScore().B : matchCard.match.tieBreakB,
+        winner: matchCard.match.winner
+      };
+      currentMatchStates.set(matchId, currentState);
+      
+      console.log('[BOARD] Saved state for match', matchId, '- ScoreA:', scoreA, 'ScoreB:', scoreB, 'Full state:', currentState);
+    }
+    }
     console.log('[BOARD] Saved states count:', currentMatchStates.size);
 
     // マッチカードマップをクリア
@@ -421,16 +473,15 @@ class Board {
     this.createCourtGrid();
     
     // 保存した状態でマッチカードを復元
-    currentMatchStates.forEach((matchState, matchId) => {
+    for (const [matchId, matchState] of currentMatchStates) {
       console.log('[BOARD] Restoring match', matchId, 'with scoreA:', matchState.scoreA, 'scoreB:', matchState.scoreB);
-      
-      // データベースから最新のマッチデータを取得
+      // データベースから最新のマッチデータを取得（非同期）
       let matchData = null;
-      if (window.db) {
+      if (window.db && typeof window.db.getMatch === 'function') {
         try {
-          matchData = window.db.getMatch(matchId);
+          matchData = await window.db.getMatch(matchId);
         } catch (error) {
-          console.warn('Failed to get match from database:', error);
+          console.warn('Failed to get match from database during restore:', error);
         }
       }
       
@@ -451,14 +502,14 @@ class Board {
       
       // データベースの該当マッチも更新
       if (window.db) {
-        window.db.updateMatch(matchData).catch(error => {
+        await window.db.updateMatch(matchData).catch(error => {
           console.warn('Failed to update match in database during court grid update:', error);
         });
       }
       
       // マッチカードを再作成して配置
       this.createAndPlaceMatchCard(matchData);
-    });
+    }
     
     // コート選択オプションを更新
     this.updateCourtSelectOptions();
@@ -729,9 +780,7 @@ class Board {
 
   // Add a new match to the board
   addMatch(match) {
-    if (match.courtNumber && match.rowPosition) {
-      this.createAndPlaceMatchCard(match);
-    }
+    // 何もしない
   }
 
   getOccupiedRowPositions(courtNumber) {
@@ -829,5 +878,338 @@ class Board {
       }
     };
     removeBatch();
+  }
+
+  // エクスポート機能のセットアップ
+  setupExportFunctions() {
+    const exportBtn = document.getElementById('board-export-btn');
+    const exportTypeSelect = document.getElementById('board-export-type');
+    
+    if (exportBtn) {
+      exportBtn.addEventListener('click', () => {
+        const exportType = exportTypeSelect.value;
+        if (exportType === 'csv') {
+          this.exportToCSV();
+        } else if (exportType === 'screenshot') {
+          this.exportToScreenshot();
+        }
+      });
+    }
+  }
+
+  // CSV形式で対戦表をエクスポート
+  async exportToCSV() {
+    try {
+      // 全てのマッチカードからデータを収集
+      const allMatches = [];
+      this.matchCards.forEach((matchCard, matchId) => {
+        // マッチカードインスタンスから最新のスコアデータを取得
+        const matchData = { ...matchCard.match };
+        
+        // マッチカードから最新のスコアを取得
+        try {
+          const currentScoreA = matchCard.getScoreA();
+          const currentScoreB = matchCard.getScoreB();
+          const currentSetScores = matchCard.getSetScores();
+          const currentTiebreakScores = matchCard.getTiebreakScore();
+          
+          // 最新のスコアデータで更新
+          if (currentScoreA !== undefined && currentScoreA !== null) {
+            matchData.scoreA = currentScoreA;
+          }
+          if (currentScoreB !== undefined && currentScoreB !== null) {
+            matchData.scoreB = currentScoreB;
+          }
+          if (currentSetScores && (currentSetScores.A.length > 0 || currentSetScores.B.length > 0)) {
+            matchData.setScores = currentSetScores;
+          }
+          if (currentTiebreakScores) {
+            matchData.tieBreakA = currentTiebreakScores.A;
+            matchData.tieBreakB = currentTiebreakScores.B;
+          }
+        } catch (error) {
+          console.warn('マッチカードからスコア取得エラー:', error);
+        }
+        
+        allMatches.push(matchData);
+      });
+      
+      if (allMatches.length === 0) {
+        alert('書き出し可能な試合データがありません');
+        return;
+      }
+      
+      // コート番号でソート
+      allMatches.sort((a, b) => {
+        const courtA = parseInt(a.courtNumber) || 999;
+        const courtB = parseInt(b.courtNumber) || 999;
+        return courtA - courtB;
+      });
+      
+      // CSVヘッダー作成
+      let csvContent = 'コート,プレイヤーA,プレイヤーB,スコア,実際終了時刻,勝者\n';
+      
+      // 各マッチを行として追加
+      allMatches.forEach(match => {
+        const courtNumber = match.courtNumber || 'N/A';
+        const playerA = `"${match.playerA.replace(/"/g, '""')}"`;
+        const playerB = `"${match.playerB.replace(/"/g, '""')}"`;
+        
+        // スコア情報を構築
+        let scoreText = 'N/A';
+        console.log('Match data for court', courtNumber, ':', {
+          scoreA: match.scoreA,
+          scoreB: match.scoreB,
+          setScores: match.setScores,
+          gameFormat: match.gameFormat
+        }); // デバッグ用
+        
+        // 試合形式を確認
+        const gameFormat = (match.gameFormat || '').toLowerCase();
+        const isMultiSet = gameFormat.includes('2set') || gameFormat.includes('3set');
+        
+        if (isMultiSet && match.setScores) {
+          // マルチセット形式の場合
+          console.log('Multi-set format detected, setScores:', match.setScores);
+          
+          let scoresA, scoresB;
+          if (Array.isArray(match.setScores)) {
+            // 配列形式の場合（古い形式）
+            scoresA = match.setScores;
+            scoresB = match.setScoresB || [];
+          } else if (match.setScores.A && match.setScores.B) {
+            // オブジェクト形式の場合（現在の形式）
+            scoresA = match.setScores.A;
+            scoresB = match.setScores.B;
+          } else {
+            // その他の形式を確認
+            scoresA = match.setScores.playerA || match.setScores.a || [];
+            scoresB = match.setScores.playerB || match.setScores.b || [];
+          }
+          
+          const scoreParts = [];
+          const maxSets = Math.max(scoresA ? scoresA.length : 0, scoresB ? scoresB.length : 0);
+          
+          for (let i = 0; i < maxSets; i++) {
+            const scoreA = scoresA && scoresA[i] !== undefined && scoresA[i] !== null && scoresA[i] !== '' ? scoresA[i] : '';
+            const scoreB = scoresB && scoresB[i] !== undefined && scoresB[i] !== null && scoresB[i] !== '' ? scoresB[i] : '';
+            
+            if (scoreA !== '' || scoreB !== '') {
+              let setScore = `${scoreA}-${scoreB}`;
+              
+              // タイブレークスコアがある場合は追加
+              if (match.tieBreakA && match.tieBreakA !== '' && !isNaN(match.tieBreakA)) {
+                setScore += `(${match.tieBreakA})`;
+              }
+              scoreParts.push(setScore);
+            }
+          }
+          
+          if (scoreParts.length > 0) {
+            scoreText = `"='${scoreParts.join(' ')}"`;
+          }
+        } else {
+          // シングルゲーム形式の場合（5game、4game1set等）
+          console.log('Single game format detected, scoreA:', match.scoreA, 'scoreB:', match.scoreB);
+          
+          const scoreA = match.scoreA !== undefined && match.scoreA !== null && match.scoreA !== '' ? match.scoreA : '';
+          const scoreB = match.scoreB !== undefined && match.scoreB !== null && match.scoreB !== '' ? match.scoreB : '';
+          
+          if (scoreA !== '' || scoreB !== '') {
+            let gameScore = `${scoreA}-${scoreB}`;
+            
+            // タイブレークスコアがある場合は追加
+            if (match.tieBreakA && match.tieBreakA !== '' && !isNaN(match.tieBreakA)) {
+              gameScore += `(${match.tieBreakA})`;
+            }
+            
+            scoreText = `"='${gameScore}"`;
+          }
+        }
+        
+        console.log('Final score text for court', courtNumber, ':', scoreText);
+        
+        // 実際終了時刻を取得
+        const actualEnd = match.actualEndTime ? new Date(match.actualEndTime).toLocaleString('ja-JP') : 'N/A';
+        
+        // 勝者情報を修正（A/Bではなく実際の名前を表示）
+        let winnerName = 'N/A';
+        if (match.winner) {
+          if (match.winner === 'A' || match.winner === 'playerA') {
+            winnerName = `"${match.playerA.replace(/"/g, '""')}"`;
+          } else if (match.winner === 'B' || match.winner === 'playerB') {
+            winnerName = `"${match.playerB.replace(/"/g, '""')}"`;
+          } else {
+            // 既に名前が入っている場合
+            winnerName = `"${match.winner.replace(/"/g, '""')}"`;
+          }
+        }
+        
+        csvContent += `${courtNumber},${playerA},${playerB},${scoreText},${actualEnd},${winnerName}\n`;
+      });
+      
+      // ファイル名を生成
+      const defaultFilename = `対戦表_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '-')}.csv`;
+      
+      // 保存処理
+      if (window.api && window.api.saveCSVFile) {
+        try {
+          const result = await window.api.saveCSVFile(csvContent, defaultFilename);
+          if (result.success) {
+            console.log('ファイルが保存されました:', result.path);
+          } else if (result.canceled) {
+            console.log('CSV保存がキャンセルされました');
+          } else {
+            console.error('CSV保存エラー:', result.error);
+            alert('ファイルの保存に失敗しました: ' + result.error);
+          }
+        } catch (error) {
+          console.error('CSV保存APIエラー:', error);
+          this._fallbackCSVSave(csvContent, defaultFilename);
+        }
+      } else {
+        console.warn('ネイティブのCSV保存APIが利用できないため、ブラウザの保存機能を使用します');
+        this._fallbackCSVSave(csvContent, defaultFilename);
+      }
+    } catch (error) {
+      console.error('CSVエクスポートエラー:', error);
+      alert('データの書き出し中にエラーが発生しました');
+    }
+  }
+
+  // フォールバックCSV保存機能
+  _fallbackCSVSave(csvContent, filename) {
+    try {
+      // BOMを追加してExcelで文字化けを防ぐ
+      const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+      const csvData = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8' });
+      
+      const url = URL.createObjectURL(csvData);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      console.log('CSVファイルがダウンロードされました:', filename);
+    } catch (error) {
+      console.error('フォールバックCSV保存エラー:', error);
+      alert('CSVファイルの保存に失敗しました');
+    }
+  }
+
+  // スクリーンショットエクスポート
+  async exportToScreenshot() {
+    try {
+      console.log('スクリーンショット機能開始');
+      
+      // html2canvasライブラリの確認
+      if (typeof html2canvas === 'undefined') {
+        console.error('html2canvas is undefined');
+        alert('スクリーンショット機能に必要なライブラリが読み込まれていません。\nページを再読み込みしてから再度お試しください。');
+        return;
+      }
+      
+      console.log('html2canvas is available');
+      
+      // 対戦表のコンテナをキャプチャ
+      const boardElement = document.getElementById('board-view');
+      if (!boardElement) {
+        console.error('board-view element not found');
+        alert('対戦表が見つかりません');
+        return;
+      }
+      
+      console.log('Board element found:', boardElement);
+      
+      // スクリーンショット作成中のメッセージを表示
+      const originalText = document.getElementById('board-export-btn').textContent;
+      document.getElementById('board-export-btn').textContent = '作成中...';
+      document.getElementById('board-export-btn').disabled = true;
+      
+      console.log('スクリーンショット作成開始');
+      
+      const canvas = await html2canvas(boardElement, {
+        backgroundColor: '#ffffff',
+        scale: 1,
+        useCORS: true,
+        allowTaint: true,
+        logging: true,
+        width: boardElement.scrollWidth,
+        height: boardElement.scrollHeight
+      });
+      
+      console.log('スクリーンショット作成完了');
+      
+      // ファイル名を生成
+      const defaultFilename = `対戦表_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '-')}.png`;
+      
+      // CanvasをBlobに変換
+      canvas.toBlob(async (blob) => {
+        try {
+          if (window.api && window.api.saveImageFile) {
+            try {
+              // BlobをArrayBufferに変換
+              const arrayBuffer = await blob.arrayBuffer();
+              const uint8Array = new Uint8Array(arrayBuffer);
+              
+              const result = await window.api.saveImageFile(uint8Array, defaultFilename);
+              if (result.success) {
+                console.log('スクリーンショットが保存されました:', result.path);
+                alert('スクリーンショットが保存されました');
+              } else if (result.canceled) {
+                console.log('スクリーンショット保存がキャンセルされました');
+              } else {
+                console.error('スクリーンショット保存エラー:', result.error);
+                alert('スクリーンショットの保存に失敗しました: ' + result.error);
+              }
+            } catch (error) {
+              console.error('スクリーンショット保存APIエラー:', error);
+              this._fallbackImageSave(blob, defaultFilename);
+            }
+          } else {
+            console.warn('ネイティブのスクリーンショット保存APIが利用できないため、ブラウザの保存機能を使用します');
+            this._fallbackImageSave(blob, defaultFilename);
+          }
+        } finally {
+          // ボタンを元に戻す
+          document.getElementById('board-export-btn').textContent = originalText;
+          document.getElementById('board-export-btn').disabled = false;
+        }
+      }, 'image/png');
+      
+    } catch (error) {
+      console.error('スクリーンショットエクスポートエラー:', error);
+      alert('スクリーンショットの作成中にエラーが発生しました: ' + error.message);
+    } finally {
+      // エラー時もボタンを元に戻す
+      try {
+        document.getElementById('board-export-btn').textContent = originalText;
+        document.getElementById('board-export-btn').disabled = false;
+      } catch (e) {
+        console.error('ボタンのリセットに失敗:', e);
+      }
+    }
+  }
+
+  // フォールバックスクリーンショット保存機能
+  _fallbackImageSave(blob, filename) {
+    try {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      console.log('スクリーンショットがダウンロードされました:', filename);
+    } catch (error) {
+      console.error('フォールバックスクリーンショット保存エラー:', error);
+      alert('スクリーンショットの保存に失敗しました');
+    }
   }
 }

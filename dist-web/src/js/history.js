@@ -146,7 +146,7 @@ class History {
   // 履歴用のマッチカードを作成
   createHistoryMatchCard(match, sequenceNumber) {
     const card = document.createElement('div');
-    card.className = 'match-card';
+    card.className = 'match-card history-match-card';
     card.dataset.matchId = match.id;
     
     // カード上部（リーグ名とメモ）
@@ -235,16 +235,24 @@ class History {
     
     // 右側のスコアとチェックマークのコンテナ
     const scoreWinContainerA = document.createElement('div');
+    scoreWinContainerA.className = 'score-win-container';
     scoreWinContainerA.style.display = 'flex';
     scoreWinContainerA.style.alignItems = 'center';
     scoreWinContainerA.style.gap = '5px';
-    scoreWinContainerA.style.width = '150px'; // 幅をさらに広げてセットスコアとチェックマークが収まるように
+    scoreWinContainerA.style.marginLeft = 'auto';
+    
+    // Winラベル
+    if (match.winner === 'A') {
+      const winALabel = document.createElement('div');
+      winALabel.className = 'win-label';
+      winALabel.textContent = '✓'; // チェックマーク
+      scoreWinContainerA.appendChild(winALabel);
+    }
     
     // スコア表示用コンテナ
     const scoreContainerA = document.createElement('div');
     scoreContainerA.className = 'set-scores-container';
     scoreContainerA.style.display = 'flex';
-    scoreContainerA.style.justifyContent = 'flex-end';
     
     // スコア表示
     if (match.gameFormat === '6game3set' || match.gameFormat === '4game3set' || 
@@ -258,13 +266,13 @@ class History {
         
         // 各セットのスコアを表示
         for (let i = 0; i < match.setScores.A.length; i++) {
-          if (match.setScores.A[i] > 0) { // スコアがある場合のみ表示
+          if (match.setScores.A[i] !== null && match.setScores.A[i] !== undefined) { // 0も含めて表示
             const setScore = document.createElement('input');
             setScore.type = 'number';
             setScore.className = 'set-score-input';
             setScore.value = match.setScores.A[i];
             setScore.readOnly = true;
-            setScore.style.width = '20px';
+            setScore.style.width = '40px';
             setScore.style.textAlign = 'center';
             setScoresDisplayA.appendChild(setScore);
           }
@@ -292,30 +300,7 @@ class History {
       scoreContainerA.appendChild(scoreA);
     }
     
-    // タイブレークスコア表示
-    if (match.tieBreakA) {
-      const tiebreakA = document.createElement('input');
-      tiebreakA.className = 'tiebreak-input';
-      tiebreakA.value = match.tieBreakA;
-      tiebreakA.readOnly = true;
-      tiebreakA.style.width = '30px';
-      scoreContainerA.appendChild(tiebreakA);
-    }
-    
     scoreWinContainerA.appendChild(scoreContainerA);
-    
-    // Winラベル
-    if (match.winner === 'A') {
-      const winALabel = document.createElement('div');
-      winALabel.className = 'win-label';
-      winALabel.textContent = '✓'; // チェックマーク
-      winALabel.style.color = 'green';
-      winALabel.style.fontWeight = 'bold';
-      winALabel.style.fontSize = '1.2em';
-      winALabel.style.marginLeft = '5px';
-      winALabel.style.marginRight = '5px';
-      scoreWinContainerA.appendChild(winALabel);
-    }
     
     playerInfoA.appendChild(scoreWinContainerA);
     playerADiv.appendChild(playerInfoA);
@@ -345,10 +330,19 @@ class History {
     
     // 右側のスコアとチェックマークのコンテナ
     const scoreWinContainerB = document.createElement('div');
+    scoreWinContainerB.className = 'score-win-container';
     scoreWinContainerB.style.display = 'flex';
     scoreWinContainerB.style.alignItems = 'center';
     scoreWinContainerB.style.gap = '5px';
-    scoreWinContainerB.style.width = '150px'; // 幅をさらに広げてセットスコアとチェックマークが収まるように
+    scoreWinContainerB.style.marginLeft = 'auto';
+    
+    // Winラベル
+    if (match.winner === 'B') {
+      const winBLabel = document.createElement('div');
+      winBLabel.className = 'win-label';
+      winBLabel.textContent = '✓'; // チェックマーク
+      scoreWinContainerB.appendChild(winBLabel);
+    }
     
     // スコア表示用コンテナ
     const scoreContainerB = document.createElement('div');
@@ -368,13 +362,13 @@ class History {
         
         // 各セットのスコアを表示
         for (let i = 0; i < match.setScores.B.length; i++) {
-          if (match.setScores.B[i] > 0) { // スコアがある場合のみ表示
+          if (match.setScores.B[i] !== null && match.setScores.B[i] !== undefined) { // 0も含めて表示
             const setScore = document.createElement('input');
             setScore.type = 'number';
             setScore.className = 'set-score-input';
             setScore.value = match.setScores.B[i];
             setScore.readOnly = true;
-            setScore.style.width = '20px';
+            setScore.style.width = '40px';
             setScore.style.textAlign = 'center';
             setScoresDisplayB.appendChild(setScore);
           }
@@ -402,36 +396,49 @@ class History {
       scoreContainerB.appendChild(scoreB);
     }
     
-    // タイブレークスコア表示
-    if (match.tieBreakB) {
-      const tiebreakB = document.createElement('input');
-      tiebreakB.className = 'tiebreak-input';
-      tiebreakB.value = match.tieBreakB;
-      tiebreakB.readOnly = true;
-      tiebreakB.style.width = '30px';
-      scoreContainerB.appendChild(tiebreakB);
-    }
-    
     scoreWinContainerB.appendChild(scoreContainerB);
-    
-    // Winラベル
-    if (match.winner === 'B') {
-      const winBLabel = document.createElement('div');
-      winBLabel.className = 'win-label';
-      winBLabel.textContent = '✓'; // チェックマーク
-      winBLabel.style.color = 'green';
-      winBLabel.style.fontWeight = 'bold';
-      winBLabel.style.fontSize = '1.2em';
-      winBLabel.style.marginLeft = '5px';
-      winBLabel.style.marginRight = '5px';
-      scoreWinContainerB.appendChild(winBLabel);
-    }
     
     playerInfoB.appendChild(scoreWinContainerB);
     playerBDiv.appendChild(playerInfoB);
     
     playersContainer.appendChild(playerBDiv);
     card.appendChild(playersContainer);
+
+    // ----- Tiebreak Row (Bottom) -----
+    const tiebreakRow = document.createElement('div');
+    tiebreakRow.className = 'tiebreak-row';
+    tiebreakRow.style.display = 'flex';
+    tiebreakRow.style.justifyContent = 'flex-end';
+    tiebreakRow.style.gap = '5px';
+    tiebreakRow.style.marginTop = '4px';
+    tiebreakRow.style.marginRight = '0';
+
+    // Helper to add TB input
+    const addTbInput = (value) => {
+      const tbInput = document.createElement('input');
+      tbInput.className = 'tiebreak-input';
+      tbInput.readOnly = true;
+      tbInput.style.width = '40px'; // 30px → 40px に変更
+      tbInput.style.textAlign = 'center';
+      tbInput.value = value || '';
+      tiebreakRow.appendChild(tbInput);
+    };
+
+    if (match.tieBreakA) {
+      const tbValues = Array.isArray(match.tieBreakA)
+        ? match.tieBreakA
+        : String(match.tieBreakA).split(',').map(v => v.trim());
+      tbValues.forEach(v => {
+        if (v !== '' && v !== '0') {
+          addTbInput(v);
+        }
+      });
+    }
+
+    // Append row only if it has children (i.e., TB was present)
+    if (tiebreakRow.children.length > 0) {
+      card.appendChild(tiebreakRow);
+    }
     
     // 下部の終了時間表示は不要 (上部にあるため)
     
@@ -765,20 +772,107 @@ class History {
       }
       
       // CSVヘッダー作成
-      let csvContent = 'コート,プレイヤーA,プレイヤーB,予定開始時刻,実際開始時刻,実際終了時刻\n';
+      let csvContent = 'コート,プレイヤーA,プレイヤーB,スコア,実際終了時刻,勝者\n';
       
       // 各マッチを行として追加
       sortedMatches.forEach(match => {
         const courtNumber = match.courtNumber || 'N/A';
-        const playerA = `"${match.playerA.replace(/"/g, '""')}"`; // 引用符のエスケープ
+        const playerA = `"${match.playerA.replace(/"/g, '""')}"`;
         const playerB = `"${match.playerB.replace(/"/g, '""')}"`;
-        const scheduledStart = match.scheduledStartTime ? new Date(match.scheduledStartTime).toLocaleString() : 'N/A';
-        const actualStart = match.actualStartTime ? new Date(match.actualStartTime).toLocaleString() : 'N/A';
-        const actualEnd = match.actualEndTime ? new Date(match.actualEndTime).toLocaleString() : 'N/A';
         
-        csvContent += `${courtNumber},${playerA},${playerB},${scheduledStart},${actualStart},${actualEnd}\n`;
+        // スコア情報を構築
+        let scoreText = 'N/A';
+        console.log('History Match data for court', courtNumber, ':', {
+          scoreA: match.scoreA,
+          scoreB: match.scoreB,
+          setScores: match.setScores,
+          gameFormat: match.gameFormat
+        }); // デバッグ用
+        
+        // 試合形式を確認
+        const gameFormat = (match.gameFormat || '').toLowerCase();
+        const isMultiSet = gameFormat.includes('2set') || gameFormat.includes('3set');
+        
+        if (isMultiSet && match.setScores) {
+          // マルチセット形式の場合
+          console.log('History Multi-set format detected, setScores:', match.setScores);
+          
+          let scoresA, scoresB;
+          if (Array.isArray(match.setScores)) {
+            // 配列形式の場合（古い形式）
+            scoresA = match.setScores;
+            scoresB = match.setScoresB || [];
+          } else if (match.setScores.A && match.setScores.B) {
+            // オブジェクト形式の場合（現在の形式）
+            scoresA = match.setScores.A;
+            scoresB = match.setScores.B;
+          } else {
+            // その他の形式を確認
+            scoresA = match.setScores.playerA || match.setScores.a || [];
+            scoresB = match.setScores.playerB || match.setScores.b || [];
+          }
+          
+          const scoreParts = [];
+          const maxSets = Math.max(scoresA ? scoresA.length : 0, scoresB ? scoresB.length : 0);
+          
+          for (let i = 0; i < maxSets; i++) {
+            const scoreA = scoresA && scoresA[i] !== undefined && scoresA[i] !== null && scoresA[i] !== '' ? scoresA[i] : '';
+            const scoreB = scoresB && scoresB[i] !== undefined && scoresB[i] !== null && scoresB[i] !== '' ? scoresB[i] : '';
+            
+            if (scoreA !== '' || scoreB !== '') {
+              let setScore = `${scoreA}-${scoreB}`;
+              
+              // タイブレークスコアがある場合は追加
+              if (match.tieBreakA && match.tieBreakA !== '' && !isNaN(match.tieBreakA)) {
+                setScore += `(${match.tieBreakA})`;
+              }
+              scoreParts.push(setScore);
+            }
+          }
+          
+          if (scoreParts.length > 0) {
+            scoreText = `"='${scoreParts.join(' ')}"`;
+          }
+        } else {
+          // シングルゲーム形式の場合（5game、4game1set等）
+          console.log('History Single game format detected, scoreA:', match.scoreA, 'scoreB:', match.scoreB);
+          
+          const scoreA = match.scoreA !== undefined && match.scoreA !== null && match.scoreA !== '' ? match.scoreA : '';
+          const scoreB = match.scoreB !== undefined && match.scoreB !== null && match.scoreB !== '' ? match.scoreB : '';
+          
+          if (scoreA !== '' || scoreB !== '') {
+            let gameScore = `${scoreA}-${scoreB}`;
+            
+            // タイブレークスコアがある場合は追加
+            if (match.tieBreakA && match.tieBreakA !== '' && !isNaN(match.tieBreakA)) {
+              gameScore += `(${match.tieBreakA})`;
+            }
+            
+            scoreText = `"='${gameScore}"`;
+          }
+        }
+        
+        console.log('History Final score text for court', courtNumber, ':', scoreText);
+        
+        // 実際終了時刻を取得
+        const actualEnd = match.actualEndTime ? new Date(match.actualEndTime).toLocaleString('ja-JP') : 'N/A';
+        
+        // 勝者情報を修正（A/Bではなく実際の名前を表示）
+        let winnerName = 'N/A';
+        if (match.winner) {
+          if (match.winner === 'A' || match.winner === 'playerA') {
+            winnerName = `"${match.playerA.replace(/"/g, '""')}"`;
+          } else if (match.winner === 'B' || match.winner === 'playerB') {
+            winnerName = `"${match.playerB.replace(/"/g, '""')}"`;
+          } else {
+            // 既に名前が入っている場合
+            winnerName = `"${match.winner.replace(/"/g, '""')}"`;
+          }
+        }
+        
+        csvContent += `${courtNumber},${playerA},${playerB},${scoreText},${actualEnd},${winnerName}\n`;
       });
-      
+        
       // Electron APIを使って保存先を選択する
       const defaultFilename = `テニス試合記録_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '-')}.csv`;
       
@@ -833,41 +927,132 @@ class History {
   }
 
   // スクリーンショットをエクスポート
-  exportScreenshot() {
-    // Electron APIを使ってスクリーンショットを撮影
-    if (window.api && window.api.takeScreenshot) {
-      try {
-        // 要素を非表示にしてからスクリーンショットを撮影
-        const exportContainer = document.querySelector('.export-group');
-        const tempStyle = exportContainer ? exportContainer.style.display : null;
-        if (exportContainer) {
-          exportContainer.style.display = 'none';
-        }
-        
-        // スクリーンショットの前に少し待つ
-        setTimeout(async () => {
-          try {
-            // Electronのプリロードスクリプト経由でスクリーンショット撮影
-            await window.api.takeScreenshot(`テニス試合記録_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '-')}.png`);
-            alert('スクリーンショットを保存しました');
-          } catch (error) {
-            console.error('スクリーンショット撮影エラー:', error);
-            alert('スクリーンショットの撮影に失敗しました');
-          } finally {
-            // 非表示にした要素を元に戻す
-            if (exportContainer && tempStyle !== null) {
-              exportContainer.style.display = tempStyle;
-            }
-          }
-        }, 100);
-      } catch (error) {
-        console.error('スクリーンショット処理エラー:', error);
-        alert('スクリーンショット機能でエラーが発生しました');
+  async exportScreenshot() {
+    try {
+      console.log('[HISTORY] スクリーンショット機能開始');
+      
+      // html2canvasライブラリの確認
+      if (typeof html2canvas === 'undefined') {
+        console.error('[HISTORY] html2canvas is undefined');
+        alert('スクリーンショット機能に必要なライブラリが読み込まれていません。\nページを再読み込みしてから再度お試しください。');
+        return;
       }
-    } else {
-      // Electron APIが利用できない場合はエラーメッセージ
-      alert('この機能はデスクトップアプリでのみ利用可能です');
-      console.warn('スクリーンショットAPIが見つかりません');
+      
+      console.log('[HISTORY] html2canvas is available');
+      
+      // 試合履歴のコンテナをキャプチャ
+      const historyElement = document.getElementById('history-view');
+      if (!historyElement) {
+        console.error('[HISTORY] history-view element not found');
+        alert('試合履歴が見つかりません');
+        return;
+      }
+      
+      console.log('[HISTORY] History element found:', historyElement);
+      
+      // エクスポートボタンを一時的に非表示
+      const exportContainer = document.querySelector('.export-group');
+      const tempStyle = exportContainer ? exportContainer.style.display : null;
+      if (exportContainer) {
+        exportContainer.style.display = 'none';
+      }
+      
+      // スクリーンショット作成中のメッセージを表示
+      const screenshotBtn = document.querySelector('select[onchange*="exportScreenshot"]');
+      let originalDisabled = false;
+      if (screenshotBtn) {
+        originalDisabled = screenshotBtn.disabled;
+        screenshotBtn.disabled = true;
+      }
+      
+      console.log('[HISTORY] スクリーンショット作成開始');
+      
+      const canvas = await html2canvas(historyElement, {
+        backgroundColor: '#ffffff',
+        scale: 1,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        width: historyElement.scrollWidth,
+        height: historyElement.scrollHeight,
+        scrollX: 0,
+        scrollY: 0
+      });
+      
+      console.log('[HISTORY] スクリーンショット作成完了');
+      
+      // ファイル名を生成
+      const defaultFilename = `試合履歴_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '-')}.png`;
+      
+      // CanvasをBlobに変換
+      canvas.toBlob(async (blob) => {
+        try {
+          if (window.api && window.api.saveImageFile) {
+            try {
+              // BlobをArrayBufferに変換
+              const arrayBuffer = await blob.arrayBuffer();
+              const uint8Array = new Uint8Array(arrayBuffer);
+              
+              const result = await window.api.saveImageFile(uint8Array, defaultFilename);
+              if (result.success) {
+                console.log('[HISTORY] スクリーンショットが保存されました:', result.path);
+                alert('スクリーンショットが保存されました');
+              } else if (result.canceled) {
+                console.log('[HISTORY] スクリーンショット保存がキャンセルされました');
+              } else {
+                console.error('[HISTORY] スクリーンショット保存エラー:', result.error);
+                alert('スクリーンショットの保存に失敗しました: ' + result.error);
+              }
+            } catch (error) {
+              console.error('[HISTORY] スクリーンショット保存APIエラー:', error);
+              this._fallbackImageSave(blob, defaultFilename);
+            }
+          } else {
+            console.warn('[HISTORY] ネイティブのスクリーンショット保存APIが利用できないため、ブラウザの保存機能を使用します');
+            this._fallbackImageSave(blob, defaultFilename);
+          }
+        } finally {
+          // 非表示にした要素を元に戻す
+          if (exportContainer && tempStyle !== null) {
+            exportContainer.style.display = tempStyle;
+          }
+          
+          // ボタンを元に戻す
+          if (screenshotBtn) {
+            screenshotBtn.disabled = originalDisabled;
+          }
+        }
+      }, 'image/png');
+      
+    } catch (error) {
+      console.error('[HISTORY] スクリーンショットエクスポートエラー:', error);
+      alert('スクリーンショットの作成中にエラーが発生しました: ' + error.message);
+      
+      // エラー時も要素を元に戻す
+      const exportContainer = document.querySelector('.export-group');
+      if (exportContainer) {
+        exportContainer.style.display = '';
+      }
+    }
+  }
+  
+  // フォールバックスクリーンショット保存機能
+  _fallbackImageSave(blob, filename) {
+    try {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      console.log('[HISTORY] スクリーンショットがダウンロードされました:', filename);
+      alert('スクリーンショットがダウンロードされました');
+    } catch (error) {
+      console.error('[HISTORY] フォールバックスクリーンショット保存エラー:', error);
+      alert('スクリーンショットの保存に失敗しました');
     }
   }
   

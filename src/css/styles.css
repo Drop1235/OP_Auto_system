@@ -303,11 +303,9 @@ button.active {
 }
 
 .score-input {
-  width: 40px;
+  width: 45px; /* スコア欄を広げる */
   text-align: center;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 2px;
+  margin: 0 2px; /* Minimal margin around score inputs */
 }
 
 /* セットスコア入力欄のスタイル */
@@ -321,13 +319,13 @@ button.active {
 }
 
 .set-score-input {
-  width: 36px; /* 幅をさらに広げて2桁の数字が確実に表示されるように */
+  width: 40px; /* 幅を調整し2桁の数字が確実に表示されるように */
   text-align: center;
   border: 1px solid #ddd;
   border-radius: 4px;
   padding: 2px 0; /* 横パディングを最小化 */
   font-size: 0.9em;
-  min-width: 36px; /* 最小幅も広げる */
+  min-width: 40px; /* 最小幅も広げる */
   box-sizing: border-box; /* ボックスサイズを調整して幅を正確に制御 */
   margin: 0; /* マージンをなくして幅を確保 */
 }
@@ -396,7 +394,7 @@ button.active {
 }
 
 .tie-break-input {
-  width: 35px;
+  width: 40px;
   text-align: center;
   border: 1px solid #ccc;
   border-radius: 3px;
@@ -587,6 +585,21 @@ th:hover {
   border: 1px solid #ccc;
   border-radius: 3px;
   box-sizing: border-box; /* paddingとborderをwidthに含める */
+  pointer-events: auto !important; /* クリックを確実に有効に */
+  cursor: text !important; /* テキスト入力カーソルを表示 */
+  user-select: text; /* テキスト選択を有効に */
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+.tiebreak-score-input:focus {
+  outline: 2px solid #007bff; /* フォーカス時のアウトライン */
+  border-color: #007bff;
+}
+
+.tiebreak-score-input:hover {
+  border-color: #999; /* ホバー時のボーダー色 */
 }
 
 /* Match Card Header adjustments if needed */
@@ -610,12 +623,23 @@ th:hover {
 }
 
 .score-input {
-    width: 40px; /* Adjust if necessary */
+    width: 45px; /* Adjust if necessary */
     text-align: center;
     margin: 0 2px; /* Minimal margin around score inputs */
 }
 
-
+.match-card .score-input,
+.match-card .set-score-input {
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  text-align: center;
+  font-size: 12px;
+  padding: 3px 5px;
+  background: white;
+  color: #333;
+  width: 45px;
+  min-width: 35px;
+}
 
 /* Delete Button for Match Card */
 .delete-button {
@@ -1029,4 +1053,239 @@ th:hover {
 
 #add-match-form button[type="button"]:hover {
   background-color: #da190b;
+}
+
+/* 履歴画面専用スタイル */
+.history-match-card {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.history-match-card .match-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #666;
+}
+
+.history-match-card .match-card-players-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-match-card .match-card-player {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.history-match-card .player-name-input {
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  flex-grow: 1;
+  padding: 0;
+  margin: 0;
+  outline: none;
+  color: #333;
+}
+
+.history-match-card .score-win-container {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+}
+
+.history-match-card .set-scores-container {
+  display: flex;
+  gap: 2px;
+}
+
+.history-match-card .score-input,
+.history-match-card .set-score-input {
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  text-align: center;
+  font-size: 12px;
+  padding: 2px 4px;
+  background: #f9f9f9;
+  color: #333;
+  min-width: 35px;
+  width: 40px;
+}
+
+.history-match-card .win-label {
+  background: #28a745;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: bold;
+}
+
+.history-match-card .delete-button {
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.history-match-card .delete-button:hover {
+  background: #c82333;
+}
+
+/* 対戦表のカードレイアウト */
+.match-card {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 10px;
+  margin: 5px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  cursor: move;
+}
+
+.match-card .match-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #666;
+}
+
+.match-card .match-card-players-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.match-card .match-card-player {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+}
+
+.match-card .player-name-input {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 13px;
+  flex-grow: 1;
+  text-align: left;
+  background: white;
+  color: #333;
+}
+
+.match-card .player-name-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 3px rgba(76, 175, 80, 0.3);
+}
+
+.match-card .score-section {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+}
+
+.match-card .score-input,
+.match-card .set-score-input {
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  text-align: center;
+  font-size: 12px;
+  padding: 3px 5px;
+  background: white;
+  color: #333;
+  width: 40px;
+}
+
+.match-card .score-input:focus,
+.match-card .set-score-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 3px rgba(76, 175, 80, 0.3);
+}
+
+.match-card .win-indicator {
+  background: #28a745;
+  color: white;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: bold;
+  min-width: 20px;
+  text-align: center;
+}
+
+.match-card .delete-button {
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.match-card .delete-button:hover {
+  background: #c82333;
+}
+
+/* Export Controls */
+.export-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.export-btn {
+  background-color: #17a2b8;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.export-btn:hover {
+  background-color: #138496;
+}
+
+#board-export-type {
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background: white;
 }

@@ -1,0 +1,50 @@
+[
+  {
+    "playerA": "aaa",
+    "playerB": "aaa",
+    "gameFormat": "6game1set",
+    "status": "Win",
+    "courtNumber": 1,
+    "rowPosition": "current",
+    "id": 1,
+    "setScores": {
+      "A": [
+        null
+      ],
+      "B": [
+        null
+      ]
+    },
+    "scoreA": 4,
+    "scoreB": 6,
+    "winner": "B",
+    "memo": "",
+    "tieBreakA": "",
+    "tieBreakB": "",
+    "actualEndTime": "2025-07-08T12:59:37.800Z"
+  },
+  {
+    "playerA": "tttRRR",
+    "playerB": "ttt",
+    "gameFormat": "6game1set",
+    "status": "Win",
+    "courtNumber": 2,
+    "rowPosition": "current",
+    "id": 2,
+    "setScores": {
+      "A": [
+        null
+      ],
+      "B": [
+        null
+      ]
+    },
+    "scoreA": 6,
+    "scoreB": 1,
+    "winner": "A",
+    "memo": "",
+    "tieBreakA": "",
+    "tieBreakB": "",
+    "actualEndTime": "2025-07-08T13:18:08.980Z"
+  }
+]

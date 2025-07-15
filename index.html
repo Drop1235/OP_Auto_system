@@ -6,8 +6,12 @@
   <title>MatchDrop - テニストーナメント対戦表</title>
   <link rel="stylesheet" href="src/css/styles.css">
   <link rel="stylesheet" href="src/css/tournament-modal.css">
+  <!-- matchData 保存ユーティリティ -->
+  <script src="src/js/matchDropStorage.js"></script>
+  <!-- ローカルストレージマネージャー -->
+  <script src="src/js/local-storage.js"></script>
   <link rel="icon" href="assets/icon.png">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+
 </head>
 <body>
   <!-- 新規大会名入力モーダル -->
@@ -27,6 +31,7 @@
     <div class="app-brand">
       <img src="assets/icon.png" alt="MatchDrop icon" class="logo-icon">
       <span class="app-name">MatchDrop</span>
+
     </div>
     <nav style="display: flex; align-items: center; gap: 8px;">
       <button id="board-view-btn" class="active">対戦表</button>
@@ -35,7 +40,9 @@
       <select id="tournament-select" style="min-width: 150px;"></select>
       <button id="add-tournament-btn" style="background-color: #2196f3; color: #fff;">新規大会</button>
       <button id="delete-tournament-btn" title="大会を削除" style="background: none; border: none; cursor: pointer; font-size: 1.3em; color: #f44336; padding: 0 8px;">🗑️</button>
-      <button id="logout-btn" style="margin-left: auto; background-color: #f44336;">ログアウト</button>
+      
+      <button id="logout-btn" style="margin-left: 8px; background-color: #f44336;">ログアウト</button>
+      <button id="publish-btn" style="margin-left: 8px; background-color: #4caf50; color:#fff;">📤 公開</button>
     </nav>
   </header>
 
@@ -50,9 +57,18 @@
             <button id="decrease-courts-btn">-</button>
             <span id="court-count-display" class="court-count-display">12</span>
             <button id="increase-courts-btn">+</button>
+          </div>
+          
+          <!-- エクスポートボタン -->
+          <div class="export-controls" style="margin-right:8px;">
+            <select id="board-export-type" style="margin-right:4px;">
+              <option value="csv">CSV形式</option>
+              <option value="screenshot">スクリーンショット</option>
+            </select>
+            <button id="board-export-btn" class="export-btn">書き出し</button>
+          </div>
           
           <button id="delete-all-matches-btn" class="delete-all-btn">全削除</button>
-        </div>
       </div>
       <div id="court-grid" class="court-grid"></div>
       
@@ -141,18 +157,34 @@
     </div>
   </div>
 
+  <!-- html2canvas for screenshot functionality -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  
+  <!-- ローカルストレージマネージャーを最初に読み込み -->
+  <script>
+    console.log('[INIT] Loading LocalStorageManager...');
+  </script>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <script src="src/js/firebase-config.js"></script>  
+  <script src="src/js/FirestoreMatchDatabase.js"></script>
+
   <script src="src/js/favicon.js"></script>
   <script src="src/js/database.js"></script>
   <script src="src/js/matchCard.js"></script>
   <script src="src/js/board.js"></script>
   <script src="src/js/history.js"></script>
   <script src="src/js/app.js"></script>
+  <script src="src/js/netlify-ui.js"></script>
+  <script src="src/js/auth.js"></script>
+  <script src="src/js/publish-ipc.js"></script>
   
   <!-- For web-only version (will be removed in Electron build) -->
   <footer class="web-footer">
     <p>テニストーナメント対戦表 - ウェブ版</p>
     <p><small>これはスタンドアロンウェブ版です。オフラインでの使用にはElectronアプリをダウンロードしてください。</small></p>
   </footer>
-  <script src="src/js/auth.js"></script>
 </body>
 </html>
