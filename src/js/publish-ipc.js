@@ -10,22 +10,18 @@ if (window.require) {
         btn.disabled = true;
         const original = btn.textContent;
         btn.textContent = '公開中...';
-        // Capture board-view as PNG via html2canvas and save to dist-web/screenshot.png
+        // Save board-view HTML snapshot to dist-web/board-view.html
         try {
           const board = document.getElementById('board-view');
-          if (board && window.html2canvas) {
-            const canvas = await window.html2canvas(board);
-            const dataURL = canvas.toDataURL('image/png');
-            const base64 = dataURL.split(',')[1];
-            const buf = Buffer.from(base64, 'base64');
+          if (board) {
             const fs = window.require('fs');
             const path = window.require('path');
-            const screenshotPath = path.join(__dirname, '..', '..', 'screenshot.png');
-            fs.writeFileSync(screenshotPath, buf);
-            console.log('screenshot saved to', screenshotPath);
+            const htmlPath = path.join(__dirname, '..', '..', 'board-view.html');
+            fs.writeFileSync(htmlPath, board.innerHTML, 'utf8');
+            console.log('Saved board-view snapshot to', htmlPath);
           }
-        } catch (capErr) {
-          console.error('Failed to capture screenshot', capErr);
+        } catch (snapErr) {
+          console.error('Failed to save board-view snapshot', snapErr);
         }
         const result = await ipcRenderer.invoke('publish-site');
         alert(result);
