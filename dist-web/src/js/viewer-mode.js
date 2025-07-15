@@ -23,9 +23,13 @@ if (!window.require) {
         bv.style.display = 'block';
       }
     }
-    // スクリーンショット用コンテナは使わない
+    // スクリーンショット画像を表示
     const ss = document.getElementById('screenshot-container');
-    if (ss) ss.style.display = 'none';
+    if (ss) {
+      ss.style.display = 'block';
+      const img = ss.querySelector('img');
+      if (img) img.src = 'screenshot.png?_=' + Date.now(); // cache bust
+    }
     const adminIds = [
       'add-match-btn',
       'decrease-courts-btn',
