@@ -11,6 +11,8 @@
  * Example (Electron after export):
  *   node update.js ../my-electron-app/dist-web
  */
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 const fs = require('fs');
 const path = require('path');
 const git = require('simple-git');
