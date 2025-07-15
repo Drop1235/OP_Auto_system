@@ -2,6 +2,7 @@
   "name": "static-web-output",
   "version": "1.0.0",
   "description": "Static HTML output for Tennis Tournament Manager – published via Netlify.",
+  "type": "module",
   "main": "electron-main.js",
   "scripts": {
     "start": "electron .",
