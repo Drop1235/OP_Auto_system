@@ -1,11 +1,7 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
-import { spawn } from 'node:child_process';
-import path from 'node:path';
-import { fileURLToPath } from 'url';
-
-// __dirname / __filename Polyfill for ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const { app, BrowserWindow, ipcMain } = require('electron');
+const { spawn } = require('child_process');
+const path = require('path');
+// CommonJSでは__dirname/__filenameは自動定義されるのでポリフィル不要
 
 // 禁止 multiple instance
 if (!app.requestSingleInstanceLock()) {
@@ -21,9 +17,9 @@ ipcMain.handle('publish-site', async (event, boardHtml) => {
   // Save board-view.html received from renderer
   try {
     if (typeof boardHtml === 'string') {
-      const fs = await import('node:fs/promises');
+      const fs = require('fs');
       const htmlPath = path.join(__dirname, 'dist-web', 'board-view.html');
-      await fs.writeFile(htmlPath, boardHtml, 'utf8');
+      fs.writeFileSync(htmlPath, boardHtml, 'utf8');
       console.log('board-view.html saved to', htmlPath);
     }
   } catch (e) {
@@ -32,9 +28,9 @@ ipcMain.handle('publish-site', async (event, boardHtml) => {
   try {
     if (mainWindow && !mainWindow.isDestroyed()) {
       const image = await mainWindow.capturePage();
-      const fs = await import('node:fs/promises');
+      const fs = require('fs');
       const screenshotPath = path.join(__dirname, 'dist-web', 'screenshot.png');
-      await fs.writeFile(screenshotPath, image.toPNG());
+      fs.writeFileSync(screenshotPath, image.toPNG());
       console.log('Screenshot saved to', screenshotPath);
     }
   } catch (capErr) {
