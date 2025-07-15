@@ -2,11 +2,30 @@
 // Hide admin / edit UI when running in a pure browser (Netlify) environment.
 if (!window.require) {
   window.addEventListener('DOMContentLoaded', () => {
-    // Show screenshot container, hide main content
-    const ss = document.getElementById('screenshot-container');
-    if (ss) ss.style.display = 'block';
+    // 閲覧モードでは対戦表だけ表示し、他を隠す
+    document.body.style.background = '#fff';
+    // 対戦表以外を非表示
+    const nav = document.querySelector('header nav');
+    if (nav) nav.style.display = 'none';
+    const tournamentSel = document.getElementById('tournament-select');
+    if (tournamentSel) tournamentSel.style.display = 'none';
     const mainEl = document.querySelector('main');
-    if (mainEl) mainEl.style.display = 'none';
+    if (mainEl) {
+      // history-view, add-match-modal などを非表示
+      mainEl.querySelectorAll('section, div, form').forEach(el => {
+        if (el.id !== 'board-view') el.style.display = 'none';
+      });
+      // board-viewだけ中央寄せ
+      const bv = document.getElementById('board-view');
+      if (bv) {
+        bv.style.margin = '40px auto';
+        bv.style.maxWidth = '1200px';
+        bv.style.display = 'block';
+      }
+    }
+    // スクリーンショット用コンテナは使わない
+    const ss = document.getElementById('screenshot-container');
+    if (ss) ss.style.display = 'none';
     const adminIds = [
       'add-match-btn',
       'decrease-courts-btn',
