@@ -63,6 +63,12 @@ if (!window.require) {
       if (el) el.style.display = 'none';
     });
 
+    // --- 追加: 全てのボタン類を徹底的に非表示にする ------------------
+    document.querySelectorAll('button, input[type="button"], input[type="submit"], a.btn, [role="button"]').forEach(el => {
+      el.style.display = 'none';
+    });
+    // -------------------------------------------------------------------
+
     // hide elements marked explicitly
     document.querySelectorAll('.admin-only').forEach(el => {
       el.style.display = 'none';
