@@ -1,6 +1,6 @@
 // Main application script
 document.addEventListener('DOMContentLoaded', () => {
-  if (window.IS_VIEWER || location.hostname.includes('netlify.app')) {
+  if (location.hostname.includes('netlify.app')) {
     console.log('[APP] viewer mode detected - skipping interactive init');
     return;
   }
@@ -25,52 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function setCurrentTournamentId(id) {
     localStorage.setItem('currentTournamentId', id);
-  }
-
-  // --- Court count helpers (per tournament) ---
-  function courtCountKey() {
-    const tid = getCurrentTournamentId() || 'default';
-    return 'courtCount_' + tid;
-  }
-  function loadCourtCount(defaultValue = 12) {
-    const v = localStorage.getItem(courtCountKey());
-    return v ? parseInt(v, 10) : defaultValue;
-  }
-  function storeCourtCount(n) {
-    localStorage.setItem(courtCountKey(), String(n));
-  }
-
-  // --- Court grid helpers ---
-  function applyCourtVisibilityLimit(maxCourts) {
-    const grid = document.getElementById('court-grid');
-    if (!grid) return;
-    [...grid.children].forEach((child, idx) => {
-      child.style.display = (idx < maxCourts) ? '' : 'none';
-    });
-    const disp = document.getElementById('court-count-display');
-    if (disp) disp.textContent = maxCourts;
-  }
-
-  async function pruneMatchesAboveCourtCount(maxCourts) {
-    if (!window.db || !window.db.getAllMatches) return;
-    try {
-      const matches = await window.db.getAllMatches();
-      const toMove = matches.filter(m => m.courtNumber && m.courtNumber > maxCourts);
-      for (const m of toMove) {
-        const updated = await window.db.updateMatch({
-          id: m.id,
-          courtNumber: null,
-          rowPosition: null,
-          status: 'Unassigned'
-        });
-        document.dispatchEvent(new CustomEvent('match-updated', { detail: { match: updated }}));
-      }
-      if (toMove.length > 0) {
-        console.log(`[APP] Pruned ${toMove.length} matches above court ${maxCourts}.`);
-      }
-    } catch (err) {
-      console.error('[APP] pruneMatchesAboveCourtCount error', err);
-    }
   }
 
   // 大会リスト初期化
@@ -204,8 +158,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- 大会管理機能 ここまで ---
   console.log('[APP] DOM content loaded, initializing application.');
   
-  // 大会ごとの保存済みコート数を取得（デフォルト12）
-  const initialCourtCount = loadCourtCount(12);
+  // ローカルストレージからコート数を取得（保存されていない場合はデフォルト値の12を使用）
+  const savedCourtCount = localStorage.getItem('courtCount');
+  const initialCourtCount = savedCourtCount ? parseInt(savedCourtCount) : 12;
   
   // Initialize components
   console.log('[APP] Creating Board instance.');
@@ -219,17 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // グローバル変数として board を設定
     window.board = new Board(initialCourtCount);
   }
-
-  // Apply saved court count limit & prune
-  applyCourtVisibilityLimit(initialCourtCount);
-  storeCourtCount(initialCourtCount);
-  pruneMatchesAboveCourtCount(initialCourtCount);
-
-  // 予防的に外部ロード完了時も適用
-  window.addEventListener('matches-loaded', () => {
-    applyCourtVisibilityLimit(loadCourtCount());
-  });
-
+  
   const history = new History();
   
   // Set up navigation
@@ -473,10 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // コート数の変更を保存
   const saveCourtsCount = () => {
-    const n = window.board.numberOfCourts;
-    storeCourtCount(n);
-    applyCourtVisibilityLimit(n);
-    pruneMatchesAboveCourtCount(n);
+    localStorage.setItem('courtCount', window.board.numberOfCourts);
   };
   
   // コート数変更ボタンのイベントリスナーを追加
@@ -604,8 +546,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
-  console.log('[APP-debug] courtCountKey =', courtCountKey());
-  console.log('[APP-debug] stored court count =', loadCourtCount());
   console.log('[APP] Application initialization complete');
 });
 

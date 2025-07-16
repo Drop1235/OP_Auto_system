@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <script>window.IS_VIEWER = location.hostname.includes("netlify.app");</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MatchDrop - テニストーナメント対戦表</title>
@@ -13,20 +12,18 @@
   <script src="src/js/local-storage.js"></script>
   <link rel="icon" href="assets/icon.png">
 
-  <style id="viewer-style">
+  <style>
     /* Netlify閲覧専用モード */
-    [data-mode="viewer"] header,
-    [data-mode="viewer"] main,
     [data-mode="viewer"] nav,
     [data-mode="viewer"] button,
     [data-mode="viewer"] select,
     [data-mode="viewer"] input,
-    [data-mode="viewer"] .modal {
+    [data-mode="viewer"] .modal,
+    [data-mode="viewer"] main {
       display: none !important;
     }
     [data-mode="viewer"] #screenshot-container {
       display: block !important;
-      margin-top: 32px;
     }
   </style>
 
@@ -34,8 +31,8 @@
 <body>
   <script>
     // --- Viewer mode detection (Netlify = read-only) ---
-    // IS_VIEWER is defined globally in <head>
-    if (window.IS_VIEWER) {
+    const IS_VIEWER = location.hostname.includes("netlify.app");
+    if (IS_VIEWER) {
       // data-modeフラグを<html>に設定（CSS制御用）
       document.documentElement.dataset.mode = "viewer";
       window.addEventListener("DOMContentLoaded", () => {
@@ -216,45 +213,18 @@
   </script>
 
   <!-- Firebase SDK -->
-  <!-- <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script> -->
-  <!-- <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script> -->
-  <!-- <script src="src/js/firebase-config.js"></script>  -->
-  <!-- <script src="src/js/FirestoreMatchDatabase.js"></script> -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <script src="src/js/firebase-config.js"></script>  
+  <script src="src/js/FirestoreMatchDatabase.js"></script>
 
-  <!-- <script src="src/js/favicon.js"></script> -->
-  <!-- <script src="src/js/database.js"></script> -->
-  <!-- <script src="src/js/matchCard.js"></script> -->
-  <!-- <script src="src/js/board.js"></script> -->
-  <!-- <script src="src/js/history.js"></script> -->
+  <script src="src/js/favicon.js"></script>
+  <script src="src/js/database.js"></script>
+  <script src="src/js/matchCard.js"></script>
+  <script src="src/js/board.js"></script>
+  <script src="src/js/history.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <!-- インタラクティブスクリプト群（viewer以外でのみ読み込み） -->
-  <script>
-    if (!window.IS_VIEWER) {
-      const scripts = [
-        "src/js/firebase-config.js",
-        "src/js/FirestoreMatchDatabase.js",
-        "src/js/favicon.js",
-        "src/js/database.js",
-        "src/js/matchCard.js",
-        "src/js/board.js",
-        "src/js/history.js",
-        "src/js/app.js",
-        "src/js/auth.js",
-        "src/js/viewer-mode.js",
-        "src/js/publish-ipc.js",
-        "src/js/settings-manager.js"
-      ];
-      (function loadNext(i = 0) {
-        if (i >= scripts.length) return;
-        const s = document.createElement('script');
-        s.src = scripts[i];
-        s.onload = () => loadNext(i + 1);
-        s.onerror = (e) => console.error('Failed to load', scripts[i], e);
-        document.body.appendChild(s);
-      })();
-    }
-  </script>
-  <!-- <script src="src/js/app.js"></script> -->
+  <script src="src/js/app.js"></script>
   <!--
   <script>
     if (location.hostname.includes("netlify.app")) {
@@ -264,10 +234,10 @@
     }
   </script>
   -->
-  <!-- <script src="src/js/auth.js"></script> -->
-  <!-- <script src="src/js/viewer-mode.js"></script> -->
-  <!-- <script src="src/js/publish-ipc.js"></script> -->
-  <!-- <script src="src/js/settings-manager.js"></script> -->
+  <script src="src/js/auth.js"></script>
+  <script src="src/js/viewer-mode.js"></script>
+  <script src="src/js/publish-ipc.js"></script>
+  <script src="src/js/settings-manager.js"></script>
   <!-- Settings dialog loader -->
   <script type="module">
     const btn = document.getElementById('settings-btn');
