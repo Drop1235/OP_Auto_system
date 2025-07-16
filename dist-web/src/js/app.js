@@ -27,18 +27,33 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('currentTournamentId', id);
   }
 
-  // --- CourtCount persistence (大会別) ---
+  // --- CourtCount persistence (大会別 + legacy fallback) ---
   function _courtCountKey() {
     const tid = getCurrentTournamentId() || 'default';
     return 'courtCount_' + tid;
   }
   function loadCourtCount(defaultValue = 12) {
+    // per-tournament
     const v = localStorage.getItem(_courtCountKey());
     const n = parseInt(v, 10);
-    return Number.isFinite(n) && n > 0 ? n : defaultValue;
+    if (Number.isFinite(n) && n > 0) return n;
+
+    // legacy fallback
+    const g = localStorage.getItem('courtCount');
+    const ng = parseInt(g, 10);
+    if (Number.isFinite(ng) && ng > 0) return ng;
+
+    return defaultValue;
   }
   function storeCourtCount(n) {
     localStorage.setItem(_courtCountKey(), String(n));
+    localStorage.setItem('courtCount', String(n)); // legacy sync
+  }
+
+  // UI上のコート数表示を更新
+  function updateCourtCountDisplay(n) {
+    const disp = document.getElementById('court-count-display');
+    if (disp) disp.textContent = String(n);
   }
 
   // UI上で最大コート数を反映（余剰コート隠す）
@@ -218,12 +233,24 @@ document.addEventListener('DOMContentLoaded', () => {
   if (window.boardInstance) {
     console.log('[APP] Found existing boardInstance, using it');
     window.board = window.boardInstance;
+
+    // enforce saved court count
+    if (window.board.numberOfCourts !== initialCourtCount) {
+      if (typeof window.board.setNumberOfCourts === 'function') {
+        window.board.setNumberOfCourts(initialCourtCount);
+      } else {
+        window.board.numberOfCourts = initialCourtCount;
+        if (typeof window.board.render === 'function') window.board.render();
+      }
+    }
+    applyCourtVisibilityLimit(initialCourtCount);
+    updateCourtCountDisplay(initialCourtCount);
+    pruneMatchesAbove(initialCourtCount);
   } else {
     console.log('[APP] No existing boardInstance found, creating new Board');
-    // グローバル変数として board を設定
     window.board = new Board(initialCourtCount);
-    // コート可視制限とデータ整合
     applyCourtVisibilityLimit(initialCourtCount);
+    updateCourtCountDisplay(initialCourtCount);
     pruneMatchesAbove(initialCourtCount);
   }
   
@@ -474,6 +501,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const n = window.board.numberOfCourts;
     storeCourtCount(n);
     applyCourtVisibilityLimit(n);
+    updateCourtCountDisplay(n);
     await pruneMatchesAbove(n);
   };
   
@@ -482,11 +510,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const increaseCourtsBtn = document.getElementById('increase-courts-btn');
   
   if (decreaseCourtsBtn) {
-    decreaseCourtsBtn.addEventListener('click', saveCourtsCount);
+    decreaseCourtsBtn.addEventListener('click', () => {
+      saveCourtsCount();
+    });
   }
   
   if (increaseCourtsBtn) {
-    increaseCourtsBtn.addEventListener('click', saveCourtsCount);
+    increaseCourtsBtn.addEventListener('click', () => {
+      saveCourtsCount();
+    });
   }
   
   // Handle form submission
