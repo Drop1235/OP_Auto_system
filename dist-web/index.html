@@ -42,6 +42,7 @@
       <button id="delete-tournament-btn" title="大会を削除" style="background: none; border: none; cursor: pointer; font-size: 1.3em; color: #f44336; padding: 0 8px;">🗑️</button>
       
       <button id="logout-btn" style="margin-left: 8px; background-color: #f44336;">ログアウト</button>
+      <button id="settings-btn" title="設定" style="margin-left: 8px;">⚙</button>
       <button id="publish-btn" style="margin-left: 8px; background-color: #4caf50; color:#fff;">📤 公開</button>
     </nav>
   </header>
@@ -187,6 +188,16 @@
   <script src="src/js/auth.js"></script>
   <script src="src/js/viewer-mode.js"></script>
   <script src="src/js/publish-ipc.js"></script>
+  <script src="src/js/settings-manager.js"></script>
+  <!-- Settings dialog loader -->
+  <script type="module">
+    const btn = document.getElementById('settings-btn');
+    if (btn) {
+      import('./src/js/settings-manager.js').then(mod => {
+        btn.addEventListener('click', () => mod.showSettingsDialog());
+      }).catch(err => console.error('Failed to load settings-manager', err));
+    }
+  </script>
   
   <!-- For web-only version (will be removed in Electron build) -->
   <footer class="web-footer">
