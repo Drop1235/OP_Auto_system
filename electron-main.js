@@ -36,6 +36,17 @@ ipcMain.handle('publish-site', async (event, boardHtml) => {
   } catch (capErr) {
     console.error('Failed to capture screenshot', capErr);
   }
+  // In dev we spawn a separate Node process. In production (packaged) Node binary is not
+  // available on the end-user PC,なので同一プロセスで実行する。
+  if (app.isPackaged) {
+    try {
+      require(path.join(__dirname, 'update.cjs'));
+      return '公開が完了しました。Netlify がデプロイを開始しました。';
+    } catch (err) {
+      console.error('update.cjs failed', err);
+      throw err;
+    }
+  }
   return await new Promise((resolve, reject) => {
     try {
       const scriptPath = path.join(__dirname, 'update.cjs');
@@ -43,6 +54,7 @@ ipcMain.handle('publish-site', async (event, boardHtml) => {
       const proc = spawn(process.execPath, [scriptPath, distWebPath], {
         cwd: __dirname,
         stdio: 'inherit',
+        shell: process.platform === 'win32', // allow paths with spaces like "Program Files"
       });
       proc.on('close', code => {
         if (code === 0) {
