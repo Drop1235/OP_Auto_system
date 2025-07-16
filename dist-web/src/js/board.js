@@ -177,10 +177,13 @@ class Board {
           newStatus = 'Next2';
         }
         
-        // Check if moving from current to history
-        if (sourceRowType === 'current' && rowType === 'history') {
+        // Check if moving to history (completed)
+        if (rowType === 'history') {
           newStatus = 'Completed';
-          actualEndTime = new Date().toISOString();
+          // Preserve existing actualEndTime if it already exists, otherwise set it now
+          if (!match.actualEndTime) {
+            actualEndTime = new Date().toISOString();
+          }
         }
         
         // Update the match in the database

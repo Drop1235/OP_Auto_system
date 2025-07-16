@@ -1012,7 +1012,8 @@ async updateMatchData(updatedData) {
     this.updateWinStatus();
     this.updateEndTimeDisplay();
     this.updateScoreInputsInteractivity();
-    this.checkLeagueWinCondition(); // スコアや試合形式変更後に勝敗条件を再チェック
+    // Commented out to prevent UI freeze - checkLeagueWinCondition will be called manually when needed
+    // this.checkLeagueWinCondition(); // スコアや試合形式変更後に勝敗条件を再チェック
 }
 
 updateWinStatus() {

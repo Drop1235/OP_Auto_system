@@ -613,7 +613,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Set match as completed
-        const actualEndTime = new Date().toISOString();
+        // 既にactualEndTimeがある場合はそれを使い、なければ今の時刻
+        const actualEndTime = match.actualEndTime || new Date().toISOString();
         
         // Update the match in the database
         const updatedMatch = await db.updateMatch({
