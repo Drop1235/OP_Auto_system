@@ -1,5 +1,9 @@
 // Main application script
 document.addEventListener('DOMContentLoaded', () => {
+  if (location.hostname.includes('netlify.app')) {
+    console.log('[APP] viewer mode detected - skipping interactive init');
+    return;
+  }
   // --- 大会管理機能 ここから ---
   const tournamentSelect = document.getElementById('tournament-select');
   const addTournamentBtn = document.getElementById('add-tournament-btn');
