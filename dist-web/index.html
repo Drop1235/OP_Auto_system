@@ -184,7 +184,13 @@
   <script src="src/js/history.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="src/js/app.js"></script>
-  <script src="src/js/netlify-ui.js"></script>
+  <script>
+    if (location.hostname.includes("netlify.app")) {
+      const script = document.createElement("script");
+      script.src = "src/js/netlify-ui.js";
+      document.body.appendChild(script);
+    }
+  </script>
   <script src="src/js/auth.js"></script>
   <script src="src/js/viewer-mode.js"></script>
   <script src="src/js/publish-ipc.js"></script>
