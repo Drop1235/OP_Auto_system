@@ -163,13 +163,24 @@ class MatchCard {
         const confirmMove = confirm('この試合を完了して履歴に移動しますか？');
         
         if (confirmMove) {
-          // 試合を完了状態に更新
+          // 勝者確定時刻を保持（既存値優先）
+          const endTs = this.match.actualEndTime ||
+                        this.match.completedAt ||
+                        new Date().toISOString();
+        
           const updatedMatch = await db.updateMatch({
             id: this.match.id,
             status: 'Completed',
-            actualEndTime: new Date().toISOString()
+            winner: this.match.winner ?? null,
+            scoreA: this.match.scoreA,
+            scoreB: this.match.scoreB,
+            actualEndTime: endTs,
+            completedAt: this.match.completedAt || endTs, // 後方互換
           });
-          
+        
+          // ローカルも同期（UI更新用）
+          this.match = { ...this.match, ...updatedMatch };
+        
           // 更新イベントを発行
           const updateEvent = new CustomEvent('match-updated', {
             detail: { match: updatedMatch }
@@ -1046,6 +1057,46 @@ updateWinStatus() {
     winBDiv.classList.remove('win-check');
   }
   
+  // --- winner timestamp capture ---
+  try {
+    let needSave = false;
+    // 勝者が確定し actualEndTime が未設定の場合は現在時刻を保存
+    if (this.match.winner && !this.match.actualEndTime) {
+      const ts = new Date().toISOString();
+      this.match.actualEndTime = ts;
+      // 後方互換フィールド (旧コード用)
+      this.match.completedAt = ts;
+      needSave = true;
+    }
+    // ステータスを Completed に統一
+    if (this.match.winner && this.match.status !== 'Completed') {
+      this.match.status = 'Completed';
+      needSave = true;
+    }
+
+    if (needSave && window.db && typeof window.db.updateMatch === 'function') {
+      window.db.updateMatch({
+        id: this.match.id,
+        winner: this.match.winner,
+        scoreA: this.match.scoreA,
+        scoreB: this.match.scoreB,
+        status: this.match.status,
+        actualEndTime: this.match.actualEndTime,
+        completedAt: this.match.completedAt,
+      })
+        .then(() => {
+          console.log('[MATCH_CARD] winner timestamp set', this.match.actualEndTime, 'id=', this.match.id);
+          // UI にも反映
+          if (typeof this.updateEndTimeDisplay === 'function') {
+            this.updateEndTimeDisplay();
+          }
+        })
+        .catch(err => console.error('Failed to update match in DB:', err));
+    }
+  } catch (e) {
+    console.error('Error while capturing winner timestamp:', e);
+  }
+
   console.log('[MATCH_CARD] Win status updated: A=', winADiv.textContent, 'B=', winBDiv.textContent);
 }
 
