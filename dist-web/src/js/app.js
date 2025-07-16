@@ -511,13 +511,13 @@ document.addEventListener('DOMContentLoaded', () => {
   
   if (decreaseCourtsBtn) {
     decreaseCourtsBtn.addEventListener('click', () => {
-      saveCourtsCount();
+      setTimeout(saveCourtsCount, 0);  // ensure board updated
     });
   }
   
   if (increaseCourtsBtn) {
     increaseCourtsBtn.addEventListener('click', () => {
-      saveCourtsCount();
+      setTimeout(saveCourtsCount, 0);
     });
   }
   
