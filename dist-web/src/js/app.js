@@ -1,6 +1,6 @@
 // Main application script
 document.addEventListener('DOMContentLoaded', () => {
-  if (location.hostname.includes('netlify.app')) {
+  if (window.IS_VIEWER || location.hostname.includes('netlify.app')) {
     console.log('[APP] viewer mode detected - skipping interactive init');
     return;
   }
