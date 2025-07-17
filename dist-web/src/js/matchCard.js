@@ -1069,11 +1069,12 @@ updateWinStatus() {
       this.match.completedAt = ts;
       needSave = true;
     }
-    // ステータスを Completed に統一
-    if (this.match.winner && this.match.status !== 'Completed') {
-      this.match.status = 'Completed';
-      needSave = true;
-    }
+    // NOTE(DoNotAutoArchive):
+    // ここで status='Completed' にすると、アプリ再起動時にボードから消えて履歴へ
+    // 自動移動してしまう（ユーザーがまだ手動で移動させていないのに）。
+    // 旧挙動：勝者✔を付けてもカードはボードに残り、ダブルクリック or ドラッグで
+    // 履歴へ送る。よってステータスは変更しない。
+    // （ユーザーが明示的に移動したときのみ Completed へ変わる。）
 
     if (needSave && window.db && typeof window.db.updateMatch === 'function') {
       window.db.updateMatch({
@@ -1081,7 +1082,7 @@ updateWinStatus() {
         winner: this.match.winner,
         scoreA: this.match.scoreA,
         scoreB: this.match.scoreB,
-        status: this.match.status,
+        status: this.match.status, // 現状維持（自動で Completed にしない）
         actualEndTime: this.match.actualEndTime,
         completedAt: this.match.completedAt,
       })
