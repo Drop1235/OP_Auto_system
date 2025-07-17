@@ -1,4 +1,23 @@
 // History Component for managing the history view
+
+// ----- history time helpers -----
+function getMatchEndTimestamp(match) {
+  return (
+    match?.actualEndTime ||
+    match?.completedAt ||
+    match?.actualStartTime ||
+    match?.startTime ||
+    ''
+  );
+}
+
+function formatHM(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (isNaN(d)) return '';
+  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+
 class History {
   constructor() {
     // View containers and elements
