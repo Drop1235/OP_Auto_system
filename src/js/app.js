@@ -548,12 +548,15 @@ document.addEventListener('DOMContentLoaded', () => {
           status: position ? 
             (position === 'current' ? 'Current' : 
              position === 'next' ? 'Next' : 
-             position === 'next2' ? 'Next2' : 'Unassigned') : 'Unassigned',
+             position === 'next2' ? 'Next2' : 
+             position === 'next3' ? 'Next3' : 
+             position === 'next4' ? 'Next4' : 
+             position === 'next5' ? 'Next5' : 'Unassigned') : 'Unassigned',
           courtNumber: courtNumber ? parseInt(courtNumber) : null,
           rowPosition: position || null
         };
         
-                // メモリDBに保存し、戻り値（ID付き）を取得
+        // メモリDBに保存し、戻り値（ID付き）を取得
         const addedMatch = await db.addMatch(newMatch);
         console.log('[APP] Match added to Memory DB:', addedMatch);
         

@@ -51,6 +51,7 @@ class MatchCard {
       '5game': '5G',
       '4game1set': '4G1set',
       '6game1set': '6G1set',
+      '6game1set_ntb': '6G1set NoTB',
       '8game1set': '8G-Pro',
       '4game2set': '4G2set+10MTB',
       '6game2set': '6G2set+10MTB',
@@ -127,11 +128,22 @@ class MatchCard {
     card.setAttribute('draggable', 'true');
     card.dataset.matchId = this.match.id;
 
-    // カード上部（リーグ名とメモ）
+    // カード上部（メモ・リーグ名・時間・削除ボタン）
     const headerDiv = document.createElement('div');
     headerDiv.className = 'match-card-header';
-    
-    // 削除ボタン (×) - ヘッダーの最初に追加
+
+    // --- メモ欄（左端） ---
+    const memoInput = document.createElement('input');
+    memoInput.type = 'text';
+    memoInput.className = 'match-card-memo';
+    memoInput.placeholder = 'メモ';
+    memoInput.value = this.match.memo || '';
+    memoInput.addEventListener('change', (e) => {
+      this.updateMatchData({ memo: e.target.value });
+    });
+    headerDiv.appendChild(memoInput);
+
+    // 削除ボタン (×) - ヘッダーの最後に追加
     const deleteButton = document.createElement('span');
     deleteButton.className = 'delete-button';
     deleteButton.textContent = '×';
@@ -140,8 +152,14 @@ class MatchCard {
       e.stopPropagation(); // カード全体のドラッグイベント等に影響しないように
       this.handleDeleteMatch();
     });
-    headerDiv.appendChild(deleteButton);
-    
+
+    // --- 試合形式・時間（右側に寄せる） ---
+    // ラッパーdivでまとめて右寄せ
+    const rightWrap = document.createElement('div');
+    rightWrap.style.display = 'flex';
+    rightWrap.style.alignItems = 'center';
+    rightWrap.style.marginLeft = '12px';
+
     // 試合形式を表示のみにするテキスト要素を追加
     const gameFormatDisplay = document.createElement('div');
     gameFormatDisplay.className = 'match-card-game-format-display';
@@ -195,7 +213,7 @@ class MatchCard {
     
     console.log('[MATCH_CARD] Setting game format display:', formatLabel);
     
-    headerDiv.appendChild(gameFormatDisplay);
+    rightWrap.appendChild(gameFormatDisplay);
 
     // 実際の終了時間
     const endTimeInput = document.createElement('input');
@@ -220,9 +238,13 @@ class MatchCard {
       this.checkLeagueWinCondition();
     });
     
-    headerDiv.appendChild(endTimeInput);
-  
-  // プレイヤー情報（縦に配置）
+    rightWrap.appendChild(endTimeInput);
+
+    // rightWrapをheaderDivに追加（削除ボタンの前に）
+    headerDiv.appendChild(rightWrap);
+    headerDiv.appendChild(deleteButton);
+
+    // プレイヤー情報（縦に配置）
     const playersContainer = document.createElement('div');
     playersContainer.className = 'match-card-players-container';
     
@@ -760,8 +782,25 @@ class MatchCard {
 
   // タイブレーク入力欄の表示・非表示を制御
   _checkAndToggleTiebreakUI() {
-    // 試合形式を小文字に統一
+    // 6G1set NoTB は常にタイブレーク入力を非表示にする
     const format = (this.match.gameFormat || '').toLowerCase();
+    if (format === '6game1set_ntb') {
+      if (this.tiebreakWrappers && Array.isArray(this.tiebreakWrappers)) {
+        this.tiebreakWrappers.forEach(w => w.style.display = 'none');
+      }
+      if (this.tiebreakRow) this.tiebreakRow.style.display = 'none';
+      // 既に入力されていた値はリセット
+      if (this.match.tieBreakA !== null) {
+        this.match.tieBreakA = null;
+      }
+      if (this.match.tieBreakB !== null) {
+        this.match.tieBreakB = null;
+      }
+      return; // 早期リターンで他形式のロジックをスキップ
+    }
+
+    // --- 既存処理 ---
+    // （format は既に上で定義済み）
 
     // 1セット方式用に合計スコアを取得（未入力は -1 扱い）
     let scoreA = parseInt(this.match.scoreA, 10);
@@ -1108,6 +1147,36 @@ shouldShowWin(player) {
 }
 
 async checkLeagueWinCondition() {
+    // 6G1set NoTB (タイブレークなし) の勝者判定
+    if (this.match.gameFormat === '6game1set_ntb') {
+      const scoreAEntered = this.match.scoreA !== null && this.match.scoreA !== undefined && this.match.scoreA !== '';
+      const scoreBEntered = this.match.scoreB !== null && this.match.scoreB !== undefined && this.match.scoreB !== '';
+      let newWinner = null;
+      let newStatus = this.match.status;
+      if (scoreAEntered && scoreBEntered) {
+        const scoreA = parseInt(this.match.scoreA, 10);
+        const scoreB = parseInt(this.match.scoreB, 10);
+        if ((scoreA === 6 || scoreB === 6) && Math.abs(scoreA - scoreB) >= 1 && scoreA <= 6 && scoreB <= 6) {
+          newWinner = scoreA > scoreB ? 'A' : 'B';
+          newStatus = 'Win';
+        }
+      }
+      // 変更があればDB・UI更新
+      if (this.match.winner !== newWinner || this.match.status !== newStatus) {
+        const updatePayload = { winner: newWinner, status: newStatus };
+        if (newWinner && !this.match.actualEndTime) {
+          updatePayload.actualEndTime = new Date().toISOString();
+        } else if (!newWinner) {
+          updatePayload.actualEndTime = null;
+        }
+        this.updateMatchData(updatePayload);
+        this.updateWinStatus();
+        this.updateEndTimeDisplay();
+      }
+      return; // NoTB 判定後は終了
+    }
+
+    // --- 以下既存処理 ---
     // デバッグ情報を画面上に表示する関数（本番環境では表示しない）
     function showDebug(msg) {
       // デバッグモードがオフの場合は何もしない

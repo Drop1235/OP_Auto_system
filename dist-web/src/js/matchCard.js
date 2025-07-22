@@ -128,11 +128,22 @@ class MatchCard {
     card.setAttribute('draggable', 'true');
     card.dataset.matchId = this.match.id;
 
-    // カード上部（リーグ名とメモ）
+    // カード上部（メモ・リーグ名・時間・削除ボタン）
     const headerDiv = document.createElement('div');
     headerDiv.className = 'match-card-header';
-    
-    // 削除ボタン (×) - ヘッダーの最初に追加
+
+    // --- メモ欄（左端） ---
+    const memoInput = document.createElement('input');
+    memoInput.type = 'text';
+    memoInput.className = 'match-card-memo';
+    memoInput.placeholder = 'メモ';
+    memoInput.value = this.match.memo || '';
+    memoInput.addEventListener('change', (e) => {
+      this.updateMatchData({ memo: e.target.value });
+    });
+    headerDiv.appendChild(memoInput);
+
+    // 削除ボタン (×) - ヘッダーの最後に追加
     const deleteButton = document.createElement('span');
     deleteButton.className = 'delete-button';
     deleteButton.textContent = '×';
@@ -141,8 +152,14 @@ class MatchCard {
       e.stopPropagation(); // カード全体のドラッグイベント等に影響しないように
       this.handleDeleteMatch();
     });
-    headerDiv.appendChild(deleteButton);
-    
+
+    // --- 試合形式・時間（右側に寄せる） ---
+    // ラッパーdivでまとめて右寄せ
+    const rightWrap = document.createElement('div');
+    rightWrap.style.display = 'flex';
+    rightWrap.style.alignItems = 'center';
+    rightWrap.style.marginLeft = '12px';
+
     // 試合形式を表示のみにするテキスト要素を追加
     const gameFormatDisplay = document.createElement('div');
     gameFormatDisplay.className = 'match-card-game-format-display';
@@ -196,7 +213,7 @@ class MatchCard {
     
     console.log('[MATCH_CARD] Setting game format display:', formatLabel);
     
-    headerDiv.appendChild(gameFormatDisplay);
+    rightWrap.appendChild(gameFormatDisplay);
 
     // 実際の終了時間
     const endTimeInput = document.createElement('input');
@@ -221,9 +238,13 @@ class MatchCard {
       this.checkLeagueWinCondition();
     });
     
-    headerDiv.appendChild(endTimeInput);
-  
-  // プレイヤー情報（縦に配置）
+    rightWrap.appendChild(endTimeInput);
+
+    // rightWrapをheaderDivに追加（削除ボタンの前に）
+    headerDiv.appendChild(rightWrap);
+    headerDiv.appendChild(deleteButton);
+
+    // プレイヤー情報（縦に配置）
     const playersContainer = document.createElement('div');
     playersContainer.className = 'match-card-players-container';
     

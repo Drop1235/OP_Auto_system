@@ -167,6 +167,7 @@
             <option value="5game">5G</option>
             <option value="4game1set">4G1set</option>
             <option value="6game1set">6G1set</option>
+              <option value="6game1set_ntb">6G1set NoTB</option>
             <option value="8game1set">8G-Pro</option>
             <option value="4game2set">4G2set+10MTB</option>
             <option value="6game2set">6G2set+10MTB</option>
@@ -197,6 +198,9 @@
             <option value="current">現在の試合</option>
             <option value="next">次の試合</option>
             <option value="next2">次々の試合</option>
+            <option value="next3">第4試合</option>
+            <option value="next4">第5試合</option>
+            <option value="next5">第6試合</option>
           </select>
         </div>
         <button type="submit">追加</button>
@@ -247,11 +251,5 @@
       }).catch(err => console.error('Failed to load settings-manager', err));
     }
   </script>
-  
-  <!-- For web-only version (will be removed in Electron build) -->
-  <footer class="web-footer">
-    <p>テニストーナメント対戦表 - ウェブ版</p>
-    <p><small>これはスタンドアロンウェブ版です。オフラインでの使用にはElectronアプリをダウンロードしてください。</small></p>
-  </footer>
 </body>
 </html>

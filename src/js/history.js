@@ -32,6 +32,14 @@ class History {
     this.sortColumn = 'endTime'; // Default sort
     this.sortDirection = 'desc';
     this.filteredMatches = [];
+    // --- Load persisted court name overrides (if any) ---
+    try {
+      const savedOverrides = localStorage.getItem('courtNameOverrides');
+      this.courtNameOverrides = savedOverrides ? JSON.parse(savedOverrides) : {};
+    } catch (err) {
+      console.warn('[History] Failed to parse saved courtNameOverrides', err);
+      this.courtNameOverrides = {};
+    }
     // currentViewMode is no longer needed as we only have card view
     
     // Ensure card view is visible by default if it was hidden
@@ -132,7 +140,49 @@ class History {
       // コート毎の色付きヘッダーを追加
       const columnHeader = document.createElement('div');
       columnHeader.className = 'court-column-header';
-      columnHeader.textContent = `コート ${courtNumber}`;
+      // コート名編集用の一時保存領域
+if (!this.courtNameOverrides) this.courtNameOverrides = {};
+let courtLabel = this.courtNameOverrides[courtNumber] || `コート${courtNumber}`;
+columnHeader.textContent = courtLabel;
+columnHeader.title = 'クリックでコート名を編集';
+columnHeader.style.cursor = 'pointer';
+// 編集機能
+columnHeader.addEventListener('click', (e) => {
+  if (columnHeader.querySelector('input')) return; // すでに編集中
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = courtLabel;
+  input.style.width = '80%';
+  input.style.fontSize = '1em';
+  input.style.textAlign = 'center';
+  columnHeader.textContent = '';
+  columnHeader.appendChild(input);
+  input.focus();
+  input.select();
+  // 確定処理
+  const finishEdit = () => {
+    const newName = input.value.trim() || `コート${courtNumber}`;
+    this.courtNameOverrides[courtNumber] = newName;
+        // Persist overrides to localStorage so that they remain after app reload
+        try {
+          localStorage.setItem('courtNameOverrides', JSON.stringify(this.courtNameOverrides));
+        } catch (err) {
+          console.warn('[History] Failed to save courtNameOverrides', err);
+        }
+    columnHeader.textContent = newName;
+    columnHeader.title = 'クリックでコート名を編集';
+    columnHeader.style.cursor = 'pointer';
+  };
+  input.addEventListener('blur', finishEdit);
+  input.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') finishEdit();
+    if (ev.key === 'Escape') {
+      columnHeader.textContent = courtLabel;
+      columnHeader.title = 'クリックでコート名を編集';
+      columnHeader.style.cursor = 'pointer';
+    }
+  });
+});
       
       // コートヘッダーの色をコート4のピンク色で統一
       const pinkColor = '#e91e63'; // コート4のピンク色
@@ -289,7 +339,7 @@ class History {
             const setScore = document.createElement('input');
             setScore.type = 'number';
             setScore.className = 'set-score-input';
-            setScore.value = match.setScores.A[i];
+            setScore.value = (match.setScores.A[i] === 0) ? '0' : match.setScores.A[i];
             setScore.readOnly = true;
             setScore.style.width = '40px';
             setScore.style.textAlign = 'center';
@@ -302,7 +352,7 @@ class History {
         // セットスコアがない場合は通常のスコアを表示
         const scoreA = document.createElement('input');
         scoreA.className = 'score-input';
-        scoreA.value = match.scoreA || '';
+        scoreA.value = (match.scoreA === 0) ? '0' : (match.scoreA ?? '');
         scoreA.readOnly = true;
         scoreA.style.width = '40px';
         scoreA.style.textAlign = 'center';
@@ -312,7 +362,7 @@ class History {
       // 通常のスコア表示
       const scoreA = document.createElement('input');
       scoreA.className = 'score-input';
-      scoreA.value = match.scoreA || '';
+      scoreA.value = (match.scoreA === 0) ? '0' : (match.scoreA ?? '');
       scoreA.readOnly = true;
       scoreA.style.width = '40px';
       scoreA.style.textAlign = 'center';
@@ -385,7 +435,7 @@ class History {
             const setScore = document.createElement('input');
             setScore.type = 'number';
             setScore.className = 'set-score-input';
-            setScore.value = match.setScores.B[i];
+            setScore.value = (match.setScores.B[i] === 0) ? '0' : match.setScores.B[i];
             setScore.readOnly = true;
             setScore.style.width = '40px';
             setScore.style.textAlign = 'center';
@@ -398,7 +448,7 @@ class History {
         // セットスコアがない場合は通常のスコアを表示
         const scoreB = document.createElement('input');
         scoreB.className = 'score-input';
-        scoreB.value = match.scoreB || '';
+        scoreB.value = (match.scoreB === 0) ? '0' : (match.scoreB ?? '');
         scoreB.readOnly = true;
         scoreB.style.width = '40px';
         scoreB.style.textAlign = 'center';
@@ -408,7 +458,7 @@ class History {
       // 通常のスコア表示
       const scoreB = document.createElement('input');
       scoreB.className = 'score-input';
-      scoreB.value = match.scoreB || '';
+      scoreB.value = (match.scoreB === 0) ? '0' : (match.scoreB ?? '');
       scoreB.readOnly = true;
       scoreB.style.width = '40px';
       scoreB.style.textAlign = 'center';
@@ -439,7 +489,7 @@ class History {
       tbInput.readOnly = true;
       tbInput.style.width = '40px'; // 30px → 40px に変更
       tbInput.style.textAlign = 'center';
-      tbInput.value = value || '';
+      tbInput.value = (value === 0 || value === '0') ? '0' : (value ?? '');
       tiebreakRow.appendChild(tbInput);
     };
 
@@ -448,7 +498,7 @@ class History {
         ? match.tieBreakA
         : String(match.tieBreakA).split(',').map(v => v.trim());
       tbValues.forEach(v => {
-        if (v !== '' && v !== '0') {
+        if (v !== '' && v !== null && v !== undefined) {
           addTbInput(v);
         }
       });

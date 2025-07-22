@@ -58,14 +58,20 @@ class Board {
       const courtRows = document.createElement('div');
       courtRows.className = 'court-rows';
       
-      // Create the three rows for each court
+      // Create six rows for each court
       const currentRow = this.createCourtRow('current', '現在の試合');
       const nextRow = this.createCourtRow('next', '次の試合');
       const next2Row = this.createCourtRow('next2', '次々の試合');
-      
+      const next3Row = this.createCourtRow('next3', '4番目の試合');
+      const next4Row = this.createCourtRow('next4', '5番目の試合');
+      const next5Row = this.createCourtRow('next5', '6番目の試合');
+
       courtRows.appendChild(currentRow);
       courtRows.appendChild(nextRow);
       courtRows.appendChild(next2Row);
+      courtRows.appendChild(next3Row);
+      courtRows.appendChild(next4Row);
+      courtRows.appendChild(next5Row);
       
       courtSlot.appendChild(courtHeader);
       courtSlot.appendChild(courtRows);
@@ -167,7 +173,6 @@ class Board {
         
         if (rowType === 'current') {
           newStatus = 'Current';
-          // Set actual start time if moving to current row
           if (match.status !== 'Current') {
             actualStartTime = new Date().toISOString();
           }
@@ -175,6 +180,12 @@ class Board {
           newStatus = 'Next';
         } else if (rowType === 'next2') {
           newStatus = 'Next2';
+        } else if (rowType === 'next3') {
+          newStatus = 'Next3';
+        } else if (rowType === 'next4') {
+          newStatus = 'Next4';
+        } else if (rowType === 'next5') {
+          newStatus = 'Next5';
         }
         
         // Check if moving to history (completed)
@@ -806,9 +817,9 @@ class Board {
         const hasCard = cardContainer && cardContainer.querySelector('.match-card');
         
         // カードがない場合は空き状態と判断
-        if (!hasCard && ['current', 'next', 'next2'].includes(rowType)) {
+        if (!hasCard && ['current', 'next', 'next2', 'next3', 'next4', 'next5'].includes(rowType)) {
           // 空き状態なのでoccupiedPositionsには追加しない
-        } else if (hasCard && ['current', 'next', 'next2'].includes(rowType)) {
+        } else if (hasCard && ['current', 'next', 'next2', 'next3', 'next4', 'next5'].includes(rowType)) {
           occupiedPositions.push(rowType);
         }
       });
