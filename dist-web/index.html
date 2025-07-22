@@ -243,12 +243,18 @@
   <script src="src/js/publish-ipc.js"></script>
   <script src="src/js/settings-manager.js"></script>
   <!-- Settings dialog loader -->
-  <script type="module">
+  <script>
     const btn = document.getElementById('settings-btn');
     if (btn) {
-      import('./src/js/settings-manager.js').then(mod => {
-        btn.addEventListener('click', () => mod.showSettingsDialog());
-      }).catch(err => console.error('Failed to load settings-manager', err));
+      // settings-manager.js has already been loaded as a normal script and
+      // exposes showSettingsDialog globally on window.
+      btn.addEventListener('click', () => {
+        if (window.showSettingsDialog) {
+          window.showSettingsDialog();
+        } else {
+          console.error('settings-manager.js not loaded');
+        }
+      });
     }
   </script>
 </body>

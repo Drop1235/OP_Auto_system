@@ -3,19 +3,19 @@
 const TOKEN_KEY = 'netlify_access_token';
 const SITEID_KEY = 'netlify_site_id';
 
-export function saveNetlifySettings(token, siteId) {
+function saveNetlifySettings(token, siteId) {
     localStorage.setItem(TOKEN_KEY, token);
     localStorage.setItem(SITEID_KEY, siteId);
 }
 
-export function loadNetlifySettings() {
+function loadNetlifySettings() {
     return {
         accessToken: localStorage.getItem(TOKEN_KEY) || '',
         siteId: localStorage.getItem(SITEID_KEY) || ''
     };
 }
 
-export function showSettingsDialog() {
+function showSettingsDialog() {
     // Create modal only once
     let modal = document.getElementById('netlify-settings-modal');
     if (!modal) {
@@ -68,4 +68,9 @@ export function showSettingsDialog() {
       modal.querySelector('#netlify-siteid-input').value = current.siteId;
       modal.style.display = 'flex';
 }
+
+// Expose globally so other scripts can call without ES modules
+window.saveNetlifySettings = saveNetlifySettings;
+window.loadNetlifySettings = loadNetlifySettings;
+window.showSettingsDialog = showSettingsDialog;
 
