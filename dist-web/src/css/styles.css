@@ -238,8 +238,8 @@ button.active {
   cursor: default;
   margin-right: 5px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  text-overflow: clip;
   max-width: 100px;
 }
 
@@ -270,12 +270,15 @@ button.active {
   align-items: center;
   margin-bottom: 4px;
   position: relative;
-  justify-content: flex-end; /* 右寄せにする */
+  justify-content: space-between; /* distribute space to allow name field room */
 }
 
 .player-name-input {
-  flex: 0 1 120px; /* 幅を少し広げる */
-  min-width: 70px;
+  /* Allow the name field to take available space */
+  flex: 1 1 auto;
+  min-width: 120px;
+  height: 38px;
+  line-height: 38px;
   border: none;
   background: transparent;
   font-size: 0.9em;
@@ -283,8 +286,8 @@ button.active {
   border-bottom: 1px dashed #ccc;
   margin-right: 8px; /* 右マージンを少し広げる */
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .match-end-time-input {
@@ -303,41 +306,53 @@ button.active {
 }
 
 .score-input {
-  width: 45px; /* スコア欄を広げる */
+  width: 80px;
+  min-width: 70px;
   text-align: center;
-  margin: 0 2px; /* Minimal margin around score inputs */
+  margin: 0 6px;
+  font-size: 1.25em;
+  font-weight: bold;
+  padding: 6px 4px;
+  overflow: visible;
+  border: 2.5px solid #888;
+  border-radius: 6px;
+  background: #fff;
 }
 
 /* セットスコア入力欄のスタイル */
 .set-scores-container {
   display: flex;
-  gap: 4px; /* 間隔を調整 */
-  margin-right: 8px; /* 右マージンを維持 */
-  flex-shrink: 0; /* 縮小しないように */
-  align-items: center; /* 縦方向に中央揃え */
-  height: 100%; /* 高さを親要素に合わせる */
+  gap: 8px; /* 間隔をさらに広げる */
+  margin-right: 8px;
+  flex-shrink: 0;
+  align-items: center;
+  height: 100%;
 }
 
 .set-score-input {
-  width: 40px; /* 幅を調整し2桁の数字が確実に表示されるように */
+  width: 60px;
+  min-width: 55px;
   text-align: center;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 2px 0; /* 横パディングを最小化 */
-  font-size: 0.9em;
-  min-width: 40px; /* 最小幅も広げる */
-  box-sizing: border-box; /* ボックスサイズを調整して幅を正確に制御 */
-  margin: 0; /* マージンをなくして幅を確保 */
+  border: 2px solid #bbb;
+  border-radius: 6px;
+  padding: 5px 0;
+  font-size: 1.1em;
+  font-weight: bold;
+  box-sizing: border-box;
+  margin: 0 2px;
+  background: #fff;
 }
 
 .total-score {
   font-weight: bold;
-  width: 20px;
+  width: 40px;
+  min-width: 40px;
   text-align: center;
   background-color: #f0f0f0;
-  border-radius: 4px;
-  padding: 2px;
+  border-radius: 6px;
+  padding: 6px 2px;
   margin-right: 8px;
+  font-size: 1.1em;
 }
 
 .win-label {
@@ -1192,6 +1207,8 @@ th:hover {
   border-radius: 4px;
   padding: 4px 6px;
   font-size: 13px;
+  height: 38px;
+  line-height: 38px;
   flex-grow: 1;
   text-align: left;
   background: white;
@@ -1288,4 +1305,15 @@ th:hover {
   border-radius: 4px;
   font-size: 14px;
   background: white;
+}
+
+/* Fix: prevent clipping of score digits in visible UI */
+.score-input,
+.set-score-input {
+  height: 38px;
+  min-height: 38px;
+  line-height: 38px;
+  padding-top: 0;
+  padding-bottom: 0;
+  overflow: visible;
 }
