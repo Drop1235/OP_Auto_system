@@ -72,7 +72,7 @@ ipcMain.handle('publish-site', async (event, boardHtml) => {
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
-    height: 800,
+    height: 2500,
     webPreferences: {
       contextIsolation: false,
       nodeIntegration: true,
