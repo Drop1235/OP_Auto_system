@@ -6,12 +6,12 @@
   font-family: 'Segoe UI', Arial, sans-serif;
 }
 
-html, body {
+html, body, .main {
   margin-top: 0 !important;
   padding-top: 0 !important;
-
   height: 100%;
   overflow-y: auto !important;
+  overflow: hidden;
 }
 
 header {
@@ -98,14 +98,20 @@ button.active {
 .main-board-area {
   max-height: 85vh;
   overflow-y: auto;
+
+  max-height: 85vh;
+  overflow-y: auto;
 }
 .board-container {
-  height: 80vh;
+  max-height: 80vh;
   overflow-y: auto;
 }
 
+@media (max-width: 768px) {
+  .board-container {
+    max-height: 70vh;
+  }
 
-@media (max-width: 700px) {
   .board-container {
     height: 70vh;
   }
@@ -815,7 +821,10 @@ th:hover {
 }
 
 /* Override match-card width specifically for unassigned cards */
-#unassigned-cards .match-card {
+#unassigned-cards .card, .match-card {
+  min-height: auto !important;
+  padding: 6px 8px !important;
+  margin-bottom: 8px !important;
   width: 280px; /* Or a width that matches court cards, adjust as needed */
   margin-bottom: 0; /* Remove bottom margin if gap is handling spacing */
 }
