@@ -1,0 +1,14 @@
+/* Netlify Preview用: スクリーンショット最適化CSS（preview-pageブランチ限定） */
+
+header,
+.top-bar,
+.tournament-selector,
+.main-board-area {
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.main-board-area,
+.setting-bar,
+.action-buttons {
+  display: none !important;
+}
