@@ -96,14 +96,14 @@ button.active {
 
 /* 親コンテナにも高さ制限とスクロールを追加（必要に応じて） */
 .board-container {
-  max-height: 80vh;
+  height: 80vh;
   overflow-y: auto;
 }
 
 
 @media (max-width: 700px) {
   .board-container {
-    max-height: 70vh;
+    height: 70vh;
   }
 }
 
