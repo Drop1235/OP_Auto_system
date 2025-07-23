@@ -1129,32 +1129,35 @@ class Board {
       console.log('html2canvas is available');
       
       // 対戦表のコンテナをキャプチャ
-      const boardElement = document.getElementById('board-view');
-      if (!boardElement) {
-        console.error('board-view element not found');
+      const mainBoardArea = document.querySelector('.main-board-area');
+      if (!mainBoardArea) {
+        console.error('.main-board-area element not found');
         alert('対戦表が見つかりません');
         return;
       }
-      
-      console.log('Board element found:', boardElement);
-      
+
+      console.log('Main board area found:', mainBoardArea);
+
       // スクリーンショット作成中のメッセージを表示
       const originalText = document.getElementById('board-export-btn').textContent;
       document.getElementById('board-export-btn').textContent = '作成中...';
       document.getElementById('board-export-btn').disabled = true;
-      
+
       console.log('スクリーンショット作成開始');
-      
-      const canvas = await html2canvas(boardElement, {
+
+      // Capture the full scrollable area
+      const scrollHeight = mainBoardArea.scrollHeight;
+      const canvas = await html2canvas(mainBoardArea, {
         backgroundColor: '#ffffff',
         scale: 1,
         useCORS: true,
         allowTaint: true,
         logging: true,
-        width: boardElement.scrollWidth,
-        height: boardElement.scrollHeight
+        scrollY: -window.scrollY,
+        windowHeight: scrollHeight,
+        height: scrollHeight
       });
-      
+
       console.log('スクリーンショット作成完了');
       
       // ファイル名を生成
