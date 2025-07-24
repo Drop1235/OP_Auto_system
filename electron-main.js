@@ -13,29 +13,26 @@ let mainWindow;
 // -----------------------------------------------------------------------------
 // IPC: "publish-site" -> Run update.js to push static site and deploy via Netlify
 // -----------------------------------------------------------------------------
-ipcMain.handle('publish-site', async (event, boardHtml) => {
-  // Save board-view.html received from renderer
+ipcMain.handle('publish-site', async (event, payload) => {
+  // payload: { html: string, png: base64 string | null }
   try {
-    if (typeof boardHtml === 'string') {
+    if (payload && typeof payload.html === 'string') {
       const fs = require('fs');
       const htmlPath = path.join(__dirname, 'dist-web', 'board-view.html');
-      fs.writeFileSync(htmlPath, boardHtml, 'utf8');
+      fs.writeFileSync(htmlPath, payload.html, 'utf8');
       console.log('board-view.html saved to', htmlPath);
     }
-  } catch (e) {
-    console.error('Failed to write board-view.html', e);
-  }
-  try {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      const image = await mainWindow.capturePage();
+    if (payload && typeof payload.png === 'string' && payload.png.startsWith('data:image/png;base64,')) {
       const fs = require('fs');
-      const screenshotPath = path.join(__dirname, 'dist-web', 'screenshot.png');
-      fs.writeFileSync(screenshotPath, image.toPNG());
-      console.log('Screenshot saved to', screenshotPath);
+      const pngPath = path.join(__dirname, 'dist-web', 'board-view.png');
+      const base64Data = payload.png.replace(/^data:image\/png;base64,/, '');
+      fs.writeFileSync(pngPath, Buffer.from(base64Data, 'base64'));
+      console.log('board-view.png saved to', pngPath);
     }
-  } catch (capErr) {
-    console.error('Failed to capture screenshot', capErr);
+  } catch (e) {
+    console.error('Failed to write board-view.html or board-view.png', e);
   }
+
   // In dev we spawn a separate Node process. In production (packaged) Node binary is not
   // available on the end-user PC,なので同一プロセスで実行する。
   if (app.isPackaged) {

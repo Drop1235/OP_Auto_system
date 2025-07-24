@@ -14,7 +14,20 @@ if (window.require) {
         try {
           const board = document.getElementById('board-view');
           if (board) {
-            const result = await ipcRenderer.invoke('publish-site', board.innerHTML);
+            // board-view要素のHTMLとPNG画像を生成してmainプロセスに送信
+            const html = board.innerHTML;
+            let pngBase64 = null;
+            if (window.html2canvas) {
+              const canvas = await window.html2canvas(board, {
+                backgroundColor: '#ffffff',
+                scale: 1,
+                useCORS: true,
+                allowTaint: true,
+                logging: false
+              });
+              pngBase64 = canvas.toDataURL('image/png');
+            }
+            const result = await ipcRenderer.invoke('publish-site', { html, png: pngBase64 });
             alert(result);
           }
         } catch (snapErr) {
