@@ -15,22 +15,27 @@ let mainWindow;
 // -----------------------------------------------------------------------------
 ipcMain.handle('publish-site', async (event, payload) => {
   // payload: { html: string, png: base64 string | null }
+  const fs = require('fs');
+  const path = require('path');
+  
   try {
+    // HTMLを保存
     if (payload && typeof payload.html === 'string') {
-      const fs = require('fs');
       const htmlPath = path.join(__dirname, 'dist-web', 'board-view.html');
       fs.writeFileSync(htmlPath, payload.html, 'utf8');
       console.log('board-view.html saved to', htmlPath);
     }
-    if (payload && typeof payload.png === 'string' && payload.png.startsWith('data:image/png;base64,')) {
-      const fs = require('fs');
+    
+    // PNGを保存
+    if (payload && payload.png && payload.png.startsWith('data:image/png;base64,')) {
       const pngPath = path.join(__dirname, 'dist-web', 'board-view.png');
       const base64Data = payload.png.replace(/^data:image\/png;base64,/, '');
       fs.writeFileSync(pngPath, Buffer.from(base64Data, 'base64'));
       console.log('board-view.png saved to', pngPath);
     }
   } catch (e) {
-    console.error('Failed to write board-view.html or board-view.png', e);
+    console.error('ファイルの保存中にエラーが発生しました:', e);
+    throw new Error(`ファイルの保存に失敗しました: ${e.message}`);
   }
 
   // In dev we spawn a separate Node process. In production (packaged) Node binary is not
