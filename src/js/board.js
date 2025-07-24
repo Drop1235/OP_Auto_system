@@ -1116,6 +1116,7 @@ class Board {
 
   // スクリーンショットエクスポート
   async exportToScreenshot() {
+    let exportBtn, originalText;
     try {
       console.log('スクリーンショット機能開始');
       
@@ -1128,26 +1129,33 @@ class Board {
       
       console.log('html2canvas is available');
       
-      // 対戦表のコンテナをキャプチャ
-      const mainBoardArea = document.querySelector('.main-board-area');
-      if (!mainBoardArea) {
-        console.error('.main-board-area element not found');
-        alert('対戦表が見つかりません');
-        return;
+      // 対戦表のキャプチャ対象を決定
+      let targetElement = document.querySelector('.main-board-area');
+      let elementType = '.main-board-area';
+      if (!targetElement) {
+        targetElement = document.getElementById('court-grid');
+        elementType = '#court-grid';
+        if (!targetElement) {
+          console.error('対戦表要素が見つかりません。.main-board-area または #court-grid が存在しません。');
+          alert('対戦表が見つかりません。ページを再読み込みしてから再度お試しください。');
+          return;
+        }
       }
-
-      console.log('Main board area found:', mainBoardArea);
+      console.log(`対戦表要素 (${elementType}) が見つかりました:`, targetElement);
 
       // スクリーンショット作成中のメッセージを表示
-      const originalText = document.getElementById('board-export-btn').textContent;
-      document.getElementById('board-export-btn').textContent = '作成中...';
-      document.getElementById('board-export-btn').disabled = true;
+      exportBtn = document.getElementById('board-export-btn');
+      originalText = exportBtn ? exportBtn.textContent : 'エクスポート';
+      if (exportBtn) {
+        exportBtn.textContent = '作成中...';
+        exportBtn.disabled = true;
+      }
 
       console.log('スクリーンショット作成開始');
 
       // Capture the full scrollable area
-      const scrollHeight = mainBoardArea.scrollHeight;
-      const canvas = await html2canvas(mainBoardArea, {
+      const scrollHeight = targetElement.scrollHeight;
+      const canvas = await html2canvas(targetElement, {
         backgroundColor: '#ffffff',
         scale: 1,
         useCORS: true,
@@ -1192,8 +1200,10 @@ class Board {
           }
         } finally {
           // ボタンを元に戻す
-          document.getElementById('board-export-btn').textContent = originalText;
-          document.getElementById('board-export-btn').disabled = false;
+          if (exportBtn) {
+            exportBtn.textContent = originalText;
+            exportBtn.disabled = false;
+          }
         }
       }, 'image/png');
       
