@@ -34,7 +34,7 @@ if (window.require) {
                 <h2>最新の対戦表（スクリーンショット）</h2>
                 <div class="note">最終更新: <span id="date"></span></div>
                 <div id="img-area">
-                  <img src="board-view.png" alt="対戦表スクリーンショット" class="screenshot-img" onerror="this.style.display='none';document.getElementById('img-area').innerHTML='<div class=\'note\'>画像がまだ生成されていません。</div>'">
+                  <img src="board-view.png?ts=${Date.now()}" alt="対戦表スクリーンショット" class="screenshot-img" onerror="this.style.display='none';document.getElementById('img-area').innerHTML='<div class=\'note\'>画像がまだ生成されていません。</div>'">
                 </div>
               </div>
               <script>
