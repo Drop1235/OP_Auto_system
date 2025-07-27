@@ -30,7 +30,7 @@ class MatchCard {
     // scoreA / scoreB 文字列を整形して保持（setScores がある場合でも最新化）
     // ただし、5game形式の場合は既存のスコアが適切であれば再フォーマットしない
     const format = (this.match.gameFormat || '').toLowerCase();
-    const isSingleGame = format === '5game' || format === '4game1set' || format === '6game1set' || format === '8game1set';
+    const isSingleGame = format === '5game' || format === '4game1set' || format === '6game1set' || format === '6game1set_ntb' || format === '8game1set';
     
     if (isSingleGame && this.match.scoreA !== undefined && this.match.scoreA !== null && this.match.scoreA !== '') {
       // 5game等の単一ゲーム形式で既にスコアが設定されている場合は保持
@@ -1038,6 +1038,43 @@ updateEndTimeDisplay() {
 }
 
 async updateMatchData(updatedData) {
+    // ---- Synchronize scoreA/scoreB ↔ setScores before saving ----
+    // Merge incoming changes first so we work with latest values
+    this.match = { ...this.match, ...updatedData };
+
+    const numSets = this._getNumberOfSets();
+
+    // Keep setScores and score strings aligned for single-set formats (including 6game1set_ntb)
+    if (numSets === 1) {
+      const valA = (this.match.scoreA === '' || this.match.scoreA === undefined || this.match.scoreA === null) ? null : parseInt(this.match.scoreA, 10);
+      const valB = (this.match.scoreB === '' || this.match.scoreB === undefined || this.match.scoreB === null) ? null : parseInt(this.match.scoreB, 10);
+      this.match.setScores = { A: [valA], B: [valB] };
+      this.match.scoreA = (valA === null || isNaN(valA)) ? '' : String(valA);
+      this.match.scoreB = (valB === null || isNaN(valB)) ? '' : String(valB);
+    } else {
+      // For multi-set: if setScores changed, recalculate total wins -> scoreA/scoreB
+      if (updatedData.setScores) {
+        this.calculateTotalScore();
+      }
+    }
+
+    // ---- Persist to DB ----
+    if (window.db && typeof window.db.updateMatch === 'function') {
+      try {
+        await window.db.updateMatch({ id: this.match.id, ...this.match });
+      } catch (error) {
+        console.error('Failed to update match in DB:', error);
+      }
+    } else {
+      console.warn('db.updateMatch function not found, skipping DB update');
+    }
+
+    // ---- UI refresh ----
+    this.updateWinStatus();
+    this.updateEndTimeDisplay();
+    this.updateScoreInputsInteractivity();
+    // Avoid heavy UI freezes; call checkLeagueWinCondition manually when needed
+  
     this.match = { ...this.match, ...updatedData };
     if (window.db && typeof window.db.updateMatch === 'function') {
       try {
