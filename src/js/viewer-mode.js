@@ -1,6 +1,6 @@
 // viewer-mode.js
 // Hide admin / edit UI when running in a pure browser (Netlify) environment.
-if (!window.require) {
+// Robust Electron detection\nconst IS_ELECTRON = typeof window !== 'undefined' && (\n  navigator.userAgent.toLowerCase().includes('electron') ||\n  (window.process && window.process.type === 'renderer')\n);\n\n// Run viewer-mode only when **not** in Electron (i.e. pure browser)\nif (!IS_ELECTRON) {
   window.addEventListener('DOMContentLoaded', () => {
     // 閲覧モードでは対戦表だけ表示し、他を隠す
     document.body.style.background = '#fff';
