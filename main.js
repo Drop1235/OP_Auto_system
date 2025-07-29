@@ -123,3 +123,20 @@ function createMatchCard(match) {
   console.log('[VIEWER] 最終的に使用するmatchData:', matchData);
   renderCourts(matchData);
 })();
+
+document.addEventListener('DOMContentLoaded', function () {
+  const publishBtn = document.getElementById('publish-btn');
+  const publishTimestamp = document.getElementById('publish-timestamp');
+  if (publishBtn && publishTimestamp) {
+    publishBtn.addEventListener('click', function () {
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mi = String(now.getMinutes()).padStart(2, '0');
+      const ss = String(now.getSeconds()).padStart(2, '0');
+      publishTimestamp.textContent = `公開: ${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+    });
+  }
+});
