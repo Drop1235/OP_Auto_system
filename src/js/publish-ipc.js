@@ -31,15 +31,10 @@ if (window.require) {
             </head>
             <body>
               <div class="container">
-                <h2>最新の対戦表（スクリーンショット）</h2>
-                <div class="note">最終更新: <span id="date"></span></div>
                 <div id="img-area">
                   <img src="board-view.png?ts=${Date.now()}" alt="対戦表スクリーンショット" class="screenshot-img" onerror="this.style.display='none';document.getElementById('img-area').innerHTML='<div class=\'note\'>画像がまだ生成されていません。</div>'">
                 </div>
               </div>
-              <script>
-                document.getElementById('date').textContent = new Date().toLocaleString('ja-JP');
-              </script>
             </body>
             </html>
             <!-- AUTO GENERATED: 対戦表PNG画像を公開 -->`;
