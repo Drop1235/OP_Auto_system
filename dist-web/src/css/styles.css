@@ -1351,3 +1351,13 @@ th:hover {
   padding-bottom: 0;
   overflow: visible;
 }
+
+/* DEBUG: Temporarily enlarge memo and time input fields to verify vertical clipping cause */
+.match-card-memo,
+.match-end-time-input {
+  height: 60px !important;
+  min-height: 60px !important;
+  line-height: 60px !important;
+  padding: 4px 0 !important;
+  overflow: visible !important;
+}
