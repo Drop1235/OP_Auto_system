@@ -1,0 +1,17 @@
+/* Overrides to ensure text in match card header is not clipped */
+.match-card-header,
+.match-card-header * {
+  line-height: 1.4em !important;
+  min-height: 24px !important;
+  overflow: visible !important;
+  box-sizing: content-box !important;
+}
+
+.match-card-memo,
+.match-end-time-input {
+  line-height: 1.4em !important;
+  height: 24px !important;
+  overflow: visible !important;
+  box-sizing: content-box !important;
+  padding: 0 !important;
+}
