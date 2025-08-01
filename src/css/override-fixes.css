@@ -2,7 +2,7 @@
 .match-card-header,
 .match-card-header * {
   line-height: 1.4em !important;
-  min-height: 24px !important;
+  min-height: 28px !important; /* 4px taller */
   overflow: visible !important;
   box-sizing: content-box !important;
 }
@@ -10,8 +10,8 @@
 .match-card-memo,
 .match-end-time-input {
   line-height: 1.4em !important;
-  height: 24px !important;
+  height: 28px !important; /* match header */
   overflow: visible !important;
   box-sizing: content-box !important;
-  padding: 0 !important;
+  padding: 0 0 2px 0 !important; /* extra bottom */
 }
